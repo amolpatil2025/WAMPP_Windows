@@ -48,6 +48,45 @@ function Start-StackSilent {
   }
 }
 
+function Get-BrowserAppExe {
+  $candidates = @(
+    "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+  )
+  foreach ($p in $candidates) {
+    if ($p -and (Test-Path -LiteralPath $p)) { return $p }
+  }
+  return $null
+}
+
+# Open URL in a dedicated Windows app window (no browser tabs/chrome).
+function Open-AppWindow([string]$Url, [string]$ProfileName = 'WebStackApp') {
+  $exe = Get-BrowserAppExe
+  if (-not $exe) {
+    Start-Process $Url
+    return
+  }
+  $profile = Join-Path $env:LOCALAPPDATA $ProfileName
+  if (-not (Test-Path -LiteralPath $profile)) {
+    New-Item -ItemType Directory -Path $profile -Force | Out-Null
+  }
+  $args = @(
+    "--app=$Url",
+    "--user-data-dir=$profile",
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-extensions',
+    '--new-window'
+  )
+  Start-Process -FilePath $exe -ArgumentList $args
+}
+
+function Open-StackPanel {
+  Open-AppWindow -Url $PanelUrl -ProfileName 'WebStackPanelApp'
+}
+
 function Start-PhpVersion([string]$Version) {
   $map = @{
     '7.4' = @{ Dir = (Join-Path $WebRoot 'php7.4.33'); Port = 9074 }
@@ -175,9 +214,10 @@ function Add-Separator {
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 }
 
-Add-MenuItem 'Open Stack Panel' { Start-Process $PanelUrl } | Out-Null
-Add-MenuItem 'Open localhost' { Start-Process 'http://localhost/' } | Out-Null
-Add-MenuItem 'Open Mail inbox' { Start-Process 'http://127.0.0.1:8025/' } | Out-Null
+Add-MenuItem 'Open Stack Panel' { Open-StackPanel } | Out-Null
+Add-MenuItem 'Open localhost' { Open-AppWindow -Url 'http://localhost/' -ProfileName 'WebStackLocalApp' } | Out-Null
+Add-MenuItem 'Open Mail inbox' { Open-AppWindow -Url 'http://127.0.0.1:8025/' -ProfileName 'WebStackMailApp' } | Out-Null
+Add-MenuItem 'Open panel in browser' { Start-Process $PanelUrl } | Out-Null
 Add-Separator
 Add-MenuItem 'Start All (Apache + default PHP + Mail)' { Start-StackSilent; Start-Sleep -Seconds 1; Update-Tray } | Out-Null
 Add-MenuItem 'Stop PHP (keep default)' { Stop-PhpOthers; Update-Tray } | Out-Null
@@ -213,7 +253,7 @@ Add-MenuItem 'Exit tray' {
 } | Out-Null
 
 $notify.ContextMenuStrip = $menu
-$notify.add_DoubleClick({ Start-Process $PanelUrl })
+$notify.add_DoubleClick({ Open-StackPanel })
 
 function Update-Tray {
   $text = Get-StatusText
