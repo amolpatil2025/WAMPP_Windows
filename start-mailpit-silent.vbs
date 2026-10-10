@@ -1,12 +1,12 @@
 ' Start Mailpit (local SMTP catcher + web UI) — fully hidden.
 Option Explicit
-Dim WshShell, fso, exe, dataDir, cmd
+Dim WshShell, fso, exe, dataDir, cmd, web
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-Const WEB = "C:\web"
-exe = WEB & "\mailpit\mailpit.exe"
-dataDir = WEB & "\mailpit\data"
+web = fso.GetParentFolderName(WScript.ScriptFullName)
+exe = web & "\mailpit\mailpit.exe"
+dataDir = web & "\mailpit\data"
 
 If Not fso.FileExists(exe) Then WScript.Quit 1
 If IsListening(1025) Then WScript.Quit 0

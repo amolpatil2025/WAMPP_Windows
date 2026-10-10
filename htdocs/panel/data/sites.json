@@ -6,7 +6,7 @@
         "aliases": [
             "local.host"
         ],
-        "root": "C:/web/htdocs/local",
+        "root": "C:/Users/amolp/Documents/web_xampp/htdocs/local",
         "php": "7.4",
         "enabled": true,
         "updated": "2026-09-25T14:38:40+05:30",
@@ -20,7 +20,7 @@
             "www.local.oe",
             "localoe"
         ],
-        "root": "C:/web/htdocs/oe",
+        "root": "C:/Users/amolp/Documents/web_xampp/htdocs/oe",
         "php": "8.0",
         "enabled": true,
         "updated": "2026-09-25T15:39:42+05:30",

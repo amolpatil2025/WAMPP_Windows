@@ -30,6 +30,9 @@
 *.pid
 Apache24/logs/
 
+# Machine-specific install path for Apache Define WEBROOT
+Apache24/conf/install-root.conf
+
 # --- htdocs: keep panel, phpmyadmin, mail-test, root index only ---
 /htdocs/**
 !/htdocs/index.php

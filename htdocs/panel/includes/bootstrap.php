@@ -2,22 +2,24 @@
 declare(strict_types=1);
 
 const PANEL_ROOT = __DIR__ . '/..';
-const WEB_ROOT = 'C:/web';
-const APACHE_BIN = WEB_ROOT . '/Apache24/bin/httpd.exe';
-const APACHE_ROOT = WEB_ROOT . '/Apache24';
 
-const MAILPIT_BIN = WEB_ROOT . '/mailpit/mailpit.exe';
+// Install root = folder that contains htdocs/ (not a fixed C:/web).
+define('WEB_ROOT', str_replace('\\', '/', dirname(__DIR__, 3)));
+define('APACHE_BIN', WEB_ROOT . '/Apache24/bin/httpd.exe');
+define('APACHE_ROOT', WEB_ROOT . '/Apache24');
+
+define('MAILPIT_BIN', WEB_ROOT . '/mailpit/mailpit.exe');
 const MAILPIT_SMTP_PORT = 1025;
 const MAILPIT_UI_PORT = 8025;
 const MAILPIT_UI_URL = 'http://127.0.0.1:8025/';
-const MAILPIT_DATA = WEB_ROOT . '/mailpit/data';
+define('MAILPIT_DATA', WEB_ROOT . '/mailpit/data');
 
 const DB_HOST = '127.0.0.1';
 const DB_USER = 'root';
 const DB_PASS = 'root';
 const DB_PORT = 3306;
 
-const PHP_VERSIONS = [
+define('PHP_VERSIONS', [
     '7.4' => [
         'label' => 'PHP 7.4',
         'dir' => WEB_ROOT . '/php7.4.33',
@@ -36,13 +38,13 @@ const PHP_VERSIONS = [
         'port' => 9084,
         'hosts' => ['php8.4', 'localhost84', 'localhost.php84'],
     ],
-];
+]);
 
 const LOCALHOST_DOMAINS = ['localhost', 'latest', 'localhost.latest'];
 
 const SETTINGS_FILE = PANEL_ROOT . '/data/settings.json';
 
-const CONFIG_FILES = [
+define('CONFIG_FILES', [
     'httpd' => [
         'label' => 'Apache httpd.conf',
         'path' => APACHE_ROOT . '/conf/httpd.conf',
@@ -63,17 +65,17 @@ const CONFIG_FILES = [
         'label' => 'php.ini (8.4)',
         'path' => WEB_ROOT . '/php8.4.26/php.ini',
     ],
-];
+]);
 
-const LOG_FILES = [
+define('LOG_FILES', [
     'error' => APACHE_ROOT . '/logs/error_log',
     'php74' => APACHE_ROOT . '/logs/php74-error.log',
     'php80' => APACHE_ROOT . '/logs/php80-error.log',
     'php84' => APACHE_ROOT . '/logs/php84-error.log',
-];
+]);
 
 /** Structured log catalog: source -> kind -> path */
-const LOG_SOURCES = [
+define('LOG_SOURCES', [
     'apache' => [
         'label' => 'Apache',
         'domains' => ['*'],
@@ -117,7 +119,30 @@ const LOG_SOURCES = [
             'php' => ['label' => 'PHP runtime', 'path' => WEB_ROOT . '/php8.4.26/logs/php_errors.log', 'format' => 'php_error'],
         ],
     ],
-];
+]);
+
+/** Keep Apache Define WEBROOT in sync with this install folder. */
+function ensure_apache_install_root(): void
+{
+    $confDir = APACHE_ROOT . '/conf';
+    if (!is_dir($confDir)) {
+        return;
+    }
+    $logsDir = APACHE_ROOT . '/logs';
+    if (!is_dir($logsDir)) {
+        @mkdir($logsDir, 0777, true);
+    }
+    $path = $confDir . '/install-root.conf';
+    $body = "# Auto-generated — do not edit. Install root for this copy of the stack.\n"
+        . 'Define WEBROOT "' . WEB_ROOT . "\"\n"
+        . 'Define SRVROOT "' . WEB_ROOT . "/Apache24\"\n";
+    $current = is_file($path) ? (string)@file_get_contents($path) : '';
+    if ($current !== $body) {
+        @file_put_contents($path, $body);
+    }
+}
+
+ensure_apache_install_root();
 
 header('X-Frame-Options: SAMEORIGIN');
 header('X-Content-Type-Options: nosniff');
@@ -364,7 +389,7 @@ function restart_apache_process(bool $deferred = false): array
 function start_mailpit(): array
 {
     if (!is_file(MAILPIT_BIN)) {
-        return ['ok' => false, 'message' => 'Mailpit not installed (C:/web/mailpit/mailpit.exe)'];
+        return ['ok' => false, 'message' => 'Mailpit not installed (' . WEB_ROOT . '/mailpit/mailpit.exe)'];
     }
     if (port_listening(MAILPIT_SMTP_PORT)) {
         return ['ok' => true, 'message' => 'Mailpit already running (SMTP :' . MAILPIT_SMTP_PORT . ')'];

@@ -186,7 +186,7 @@ function renderStatus() {
       desc: 'Catches PHP mail locally',
       up: !!mail.up,
       detail: mail.installed === false
-        ? 'Not installed (C:/web/mailpit)'
+        ? 'Not installed (mailpit/ under install root)'
         : `SMTP :${mail.smtp_port || 1025} · UI :${mail.ui_port || 8025}`,
       actions: mail.installed === false
         ? []
@@ -827,7 +827,7 @@ function editSite(id) {
 function suggestSitePath() {
   const domain = ($('#site-domain').value || $('#site-name').value || 'site').trim().toLowerCase();
   const slug = domain.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site';
-  const base = (state.sites?.htdocs || 'C:/web/htdocs').replace(/\\/g, '/');
+  const base = (state.sites?.htdocs || '').replace(/\\/g, '/') || 'htdocs';
   $('#site-root').value = base.replace(/\/$/, '') + '/' + slug;
   if (!$('#site-domain').value && slug) {
     $('#site-domain').value = slug.includes('.') ? slug : slug + '.test';

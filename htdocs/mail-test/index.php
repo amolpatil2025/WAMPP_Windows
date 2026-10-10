@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <form method="post">
     <label>To <input name="to" value="you@example.test" required></label>
     <label>Subject <input name="subject" value="Hello from Web Stack" required></label>
-    <label>Body <textarea name="body" rows="5">This is a test message from C:\web.</textarea></label>
+    <label>Body <textarea name="body" rows="5">This is a test message from the local web stack.</textarea></label>
     <button type="submit">Send test mail</button>
   </form>
 </body>

@@ -133,7 +133,7 @@ require __DIR__ . '/includes/bootstrap.php';
 
             <div class="card">
               <h2>Built-in hosts</h2>
-              <p class="muted">System PHP routers — document root <code>C:/web/htdocs</code>.</p>
+              <p class="muted">System PHP routers — document root <code><?= htmlspecialchars(WEB_ROOT . '/htdocs', ENT_QUOTES, 'UTF-8') ?></code>.</p>
               <div id="system-sites" class="stack" style="margin-top:12px"></div>
             </div>
           </div>
@@ -153,7 +153,7 @@ require __DIR__ . '/includes/bootstrap.php';
               </label>
               <label>Local path
                 <div class="path-row">
-                  <input type="text" id="site-root" placeholder="C:/web/htdocs/myapp" required>
+                  <input type="text" id="site-root" placeholder="<?= htmlspecialchars(WEB_ROOT . '/htdocs/myapp', ENT_QUOTES, 'UTF-8') ?>" required>
                   <button class="btn" type="button" id="site-suggest-path">Use htdocs</button>
                 </div>
               </label>
@@ -312,7 +312,7 @@ require __DIR__ . '/includes/bootstrap.php';
               <input type="text" id="phpini-date_timezone" class="field-input" placeholder="Asia/Kolkata">
             </label>
             <label class="field-label">Error log path
-              <input type="text" id="phpini-error_log" class="field-input mono" placeholder="C:/web/php…/logs/php_errors.log">
+              <input type="text" id="phpini-error_log" class="field-input mono" placeholder="<?= htmlspecialchars(WEB_ROOT . '/php…/logs/php_errors.log', ENT_QUOTES, 'UTF-8') ?>">
             </label>
           </div>
           <div class="toggle-list" style="margin-top:12px">

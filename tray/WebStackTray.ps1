@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $ErrorActionPreference = 'SilentlyContinue'
-$WebRoot = 'C:\web'
+$WebRoot = Split-Path -Parent $PSScriptRoot
 $PanelUrl = 'http://localhost/panel/'
 $MutexName = 'Local\WebStackTrayMutex'
 
@@ -50,9 +50,9 @@ function Start-StackSilent {
 
 function Start-PhpVersion([string]$Version) {
   $map = @{
-    '7.4' = @{ Dir = 'C:\web\php7.4.33'; Port = 9074 }
-    '8.0' = @{ Dir = 'C:\web\php8.0.30'; Port = 9080 }
-    '8.4' = @{ Dir = 'C:\web\php8.4.26'; Port = 9084 }
+    '7.4' = @{ Dir = (Join-Path $WebRoot 'php7.4.33'); Port = 9074 }
+    '8.0' = @{ Dir = (Join-Path $WebRoot 'php8.0.30'); Port = 9080 }
+    '8.4' = @{ Dir = (Join-Path $WebRoot 'php8.4.26'); Port = 9084 }
   }
   if (-not $map.ContainsKey($Version)) { return }
   $m = $map[$Version]

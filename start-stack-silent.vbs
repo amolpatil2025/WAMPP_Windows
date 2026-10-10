@@ -1,12 +1,13 @@
 ' Fully silent stack start — default PHP + Mailpit + Apache, no console windows.
 ' On Windows Startup / tray launch: only the panel default PHP is started (not all versions).
+' Install root = folder containing this script (not a fixed C:\web).
 Option Explicit
 
-Dim WshShell, fso
+Dim WshShell, fso, WEB
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-Const WEB = "C:\web"
+WEB = fso.GetParentFolderName(WScript.ScriptFullName)
 
 StartDefaultPhp
 
@@ -26,11 +27,11 @@ Sub StartDefaultPhp
   ver = GetDefaultPhpVersion()
   Select Case ver
     Case "7.4"
-      StartPhp "C:\web\php7.4.33", 9074
+      StartPhp WEB & "\php7.4.33", 9074
     Case "8.4"
-      StartPhp "C:\web\php8.4.26", 9084
+      StartPhp WEB & "\php8.4.26", 9084
     Case Else
-      StartPhp "C:\web\php8.0.30", 9080
+      StartPhp WEB & "\php8.0.30", 9080
   End Select
 End Sub
 
@@ -71,6 +72,7 @@ Sub StartApacheWithRetry
   Dim httpd, i
   httpd = WEB & "\Apache24\bin\httpd.exe"
   If Not fso.FileExists(httpd) Then Exit Sub
+  WshShell.Run "wscript //B //Nologo """ & WEB & "\write-install-root.vbs""", 0, True
   For i = 1 To 6
     If IsListening(80) Then Exit Sub
     ' -d sets ServerRoot even when cwd is Startup / System32

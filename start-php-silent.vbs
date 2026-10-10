@@ -1,12 +1,13 @@
 ' Start PHP listeners only — fully hidden (no console).
 Option Explicit
-Dim WshShell, fso
+Dim WshShell, fso, WEB
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
+WEB = fso.GetParentFolderName(WScript.ScriptFullName)
 
-StartPhp "C:\web\php7.4.33", 9074
-StartPhp "C:\web\php8.0.30", 9080
-StartPhp "C:\web\php8.4.26", 9084
+StartPhp WEB & "\php7.4.33", 9074
+StartPhp WEB & "\php8.0.30", 9080
+StartPhp WEB & "\php8.4.26", 9084
 WScript.Quit 0
 
 Sub StartPhp(phpDir, port)
