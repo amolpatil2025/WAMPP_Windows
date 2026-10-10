@@ -16,7 +16,7 @@
 # Local mail catcher binary + DB (keep start scripts at repo root)
 /mailpit/**
 !/mailpit/.gitkeep
-
+!/mailpit/mailpit.exe
 # Apache Lounge / package junk
 /-- Win32 VS18  --
 /ReadMe.txt
