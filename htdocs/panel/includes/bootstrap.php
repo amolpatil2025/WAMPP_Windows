@@ -142,7 +142,102 @@ function ensure_apache_install_root(): void
     }
 }
 
+/**
+ * Pin php.ini filesystem paths to the PHP folder on THIS machine.
+ * Safe when the project is copied to another device / drive / folder name.
+ */
+function phpini_set_directive(string $content, string $key, string $value, bool $quote = false): string
+{
+    $formatted = $quote ? '"' . $value . '"' : $value;
+    $line = $key . ' = ' . $formatted;
+    $qKey = preg_quote($key, '/');
+
+    // Active lines only (do not touch commented examples like ";     session.save_path = ...").
+    $active = '/^\s*' . $qKey . '\s*=.*$/mi';
+    if (preg_match($active, $content)) {
+        $content = (string)preg_replace($active, $line, $content, 1);
+        // Drop duplicate active assignments for this key.
+        $seen = false;
+        $out = [];
+        foreach (preg_split('/\R/', $content) ?: [] as $row) {
+            if (preg_match('/^\s*' . $qKey . '\s*=/i', $row)) {
+                if ($seen) {
+                    continue;
+                }
+                $seen = true;
+                $out[] = $line;
+                continue;
+            }
+            $out[] = $row;
+        }
+        return implode("\n", $out);
+    }
+
+    // Uncomment a plain ";key = ..." stub (not indented doc examples).
+    $stub = '/^;' . $qKey . '\s*=.*$/mi';
+    if (preg_match($stub, $content)) {
+        return (string)preg_replace($stub, $line, $content, 1);
+    }
+
+    return rtrim($content) . "\n" . $line . "\n";
+}
+
+function ensure_php_runtime_paths(): void
+{
+    $winRoot = str_replace('/', '\\', WEB_ROOT);
+    foreach (PHP_VERSIONS as $meta) {
+        $dir = str_replace('\\', '/', $meta['dir']);
+        if (!is_dir($dir)) {
+            continue;
+        }
+        foreach (['tmp', 'logs'] as $sub) {
+            $path = $dir . '/' . $sub;
+            if (!is_dir($path)) {
+                @mkdir($path, 0777, true);
+            }
+        }
+        $ini = $dir . '/php.ini';
+        if (!is_file($ini)) {
+            continue;
+        }
+        $raw = (string)@file_get_contents($ini);
+        if ($raw === '') {
+            continue;
+        }
+        $updated = $raw;
+        $folder = basename($dir);
+
+        // Rewrite absolute paths from another device (active lines only).
+        $pathRe = '#[A-Za-z]:[^\\r\\n"\']*[\\\\/]' . preg_quote($folder, '#') . '(?=[\\\\/])#i';
+        $legacy = ['C:/web' => WEB_ROOT, 'C:\\web' => $winRoot, 'c:/web' => WEB_ROOT, 'c:\\web' => $winRoot];
+        $lines = preg_split('/\R/', $updated) ?: [];
+        foreach ($lines as $i => $row) {
+            $trim = ltrim($row);
+            if ($trim === '' || strpos($trim, ';') === 0) {
+                continue;
+            }
+            $row = (string)preg_replace($pathRe, $dir, $row);
+            $row = str_replace(array_keys($legacy), array_values($legacy), $row);
+            $lines[$i] = $row;
+        }
+        $updated = implode("\n", $lines);
+
+        $tmp = $dir . '/tmp';
+        $log = $dir . '/logs/php_errors.log';
+        $updated = phpini_set_directive($updated, 'session.save_path', $tmp, true);
+        $updated = phpini_set_directive($updated, 'error_log', $log, false);
+        $updated = phpini_set_directive($updated, 'upload_tmp_dir', $tmp, true);
+        $updated = phpini_set_directive($updated, 'sys_temp_dir', $tmp, true);
+        $updated = phpini_set_directive($updated, 'soap.wsdl_cache_dir', $tmp, true);
+
+        if ($updated !== $raw) {
+            @file_put_contents($ini, $updated);
+        }
+    }
+}
+
 ensure_apache_install_root();
+ensure_php_runtime_paths();
 
 header('X-Frame-Options: SAMEORIGIN');
 header('X-Content-Type-Options: nosniff');

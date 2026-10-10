@@ -51,3 +51,7 @@ Apache24/conf/install-root.conf
 /htdocs/panel/data/_run_hidden.vbs
 
 # --- Keep (not ignored): tray/, *.bat, *.vbs, *.ps1, .gitignore ---
+
+# phpMyAdmin Twig / temp cache (must come after !/htdocs/phpmyadmin/**)
+/htdocs/phpmyadmin/tmp/
+/htdocs/phpmyadmin/tmp/**

@@ -4,6 +4,7 @@ Dim WshShell, fso, WEB
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 WEB = fso.GetParentFolderName(WScript.ScriptFullName)
+WshShell.Run "wscript //B //Nologo """ & WEB & "\write-install-root.vbs""", 0, True
 
 StartPhp WEB & "\php7.4.33", 9074
 StartPhp WEB & "\php8.0.30", 9080

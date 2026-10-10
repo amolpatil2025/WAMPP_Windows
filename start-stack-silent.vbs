@@ -9,6 +9,9 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 
 WEB = fso.GetParentFolderName(WScript.ScriptFullName)
 
+' Rewrite php.ini / Apache WEBROOT for this folder before starting listeners
+WshShell.Run "wscript //B //Nologo """ & WEB & "\write-install-root.vbs""", 0, True
+
 StartDefaultPhp
 
 ' Local mail catcher (SMTP 1025 / UI 8025)
