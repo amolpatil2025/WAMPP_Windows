@@ -52,6 +52,6 @@ Apache24/conf/install-root.conf
 
 # --- Keep (not ignored): tray/, *.bat, *.vbs, *.ps1, .gitignore ---
 
-# phpMyAdmin Twig / temp cache (must come after !/htdocs/phpmyadmin/**)
+# phpMyAdmin runtime cache (must come after !/htdocs/phpmyadmin/**)
 /htdocs/phpmyadmin/tmp/
 /htdocs/phpmyadmin/tmp/**
