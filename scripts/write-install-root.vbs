@@ -3,11 +3,12 @@
 '  - Apache24/logs
 '  - each php*/tmp, php*/logs
 '  - force php.ini session/error/upload/temp paths to THIS php folder
-' Called before PHP/Apache start.
+' Called before PHP/Apache start. Lives in scripts\; install root is parent.
 Option Explicit
-Dim fso, web, unix, confDir, logsDir, conf, ts, folder, phpIni
+Dim fso, scripts, web, unix, confDir, logsDir, conf, ts, folder, phpIni
 Set fso = CreateObject("Scripting.FileSystemObject")
-web = fso.GetParentFolderName(WScript.ScriptFullName)
+scripts = fso.GetParentFolderName(WScript.ScriptFullName)
+web = fso.GetParentFolderName(scripts)
 unix = Replace(web, "\", "/")
 
 confDir = web & "\Apache24\conf"
@@ -39,7 +40,7 @@ Sub EnsureDir(path)
 End Sub
 
 Sub SyncPhpIni(phpDir, iniPath)
-  Dim raw, updated, phpUnix, phpName, tmpUnix, logUnix, stream, re
+  Dim raw, updated, phpUnix, phpName, tmpUnix, logUnix, stream
   raw = ReadText(iniPath)
   phpUnix = Replace(phpDir, "\", "/")
   phpName = fso.GetFileName(phpDir)
@@ -47,10 +48,8 @@ Sub SyncPhpIni(phpDir, iniPath)
   logUnix = phpUnix & "/logs/php_errors.log"
   updated = raw
 
-  ' Rewrite old absolute paths on active lines only (other device / folder).
   updated = RewriteActivePaths(updated, phpName, phpUnix, unix, web)
 
-  ' Always pin runtime dirs to this php folder (device-independent).
   updated = SetIniDirective(updated, "session.save_path", """" & tmpUnix & """")
   updated = SetIniDirective(updated, "error_log", logUnix)
   updated = SetIniDirective(updated, "upload_tmp_dir", """" & tmpUnix & """")
@@ -65,7 +64,7 @@ Sub SyncPhpIni(phpDir, iniPath)
 End Sub
 
 Function SetIniDirective(content, key, valueLine)
-  Dim re, line, lines, i, row, out, seen, activeRe, stubRe
+  Dim line, lines, i, row, out, seen, activeRe, stubRe
   line = key & " = " & valueLine
   Set activeRe = New RegExp
   activeRe.IgnoreCase = True

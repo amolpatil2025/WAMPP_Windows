@@ -39,4 +39,4 @@ Next
 WScript.Sleep 400
 
 cmd = "cmd /c set PHPRC=" & dir & "&& set PHP_FCGI_CHILDREN=8&& set PHP_FCGI_MAX_REQUESTS=500&& """ & dir & "\php-cgi.exe"" -b 127.0.0.1:" & port & " -c """ & dir & """"
-sh.Run "wscript //B //Nologo """ & root & "\run-hidden.vbs"" """ & Replace(cmd, """", """""") & """", 0, False
+sh.Run "wscript //B //Nologo """ & root & "\scripts\run-hidden.vbs"" """ & Replace(cmd, """", """""") & """", 0, False

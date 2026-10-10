@@ -50,7 +50,7 @@ Apache24/conf/install-root.conf
 /htdocs/panel/data/*.bak*
 /htdocs/panel/data/_run_hidden.vbs
 
-# --- Keep (not ignored): tray/, *.bat, *.vbs, *.ps1, .gitignore ---
+# --- Keep (not ignored): start.bat, scripts/, tray/, .gitignore ---
 
 # phpMyAdmin runtime cache (must come after !/htdocs/phpmyadmin/**)
 /htdocs/phpmyadmin/tmp/

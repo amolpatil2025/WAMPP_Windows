@@ -1,16 +1,29 @@
 # Web Stack (Apache · PHP · MySQL · Mail)
 
-Local Windows web stack under `C:\web` with a control panel for sites, PHP config, logs, and database tools.
+Portable Windows web stack (install folder can live anywhere) with a control panel for sites, PHP config, logs, and database tools. Start with root `start.bat`.
+
+![Stack Panel overview](pic/panel-overview.png)
 
 | Component | Location | Notes |
 |-----------|----------|--------|
-| Apache 2.4 | `C:\web\Apache24\` | [Apache Lounge](https://www.apachelounge.com/download/) Win32 VS18 |
-| PHP 7.4.33 | `C:\web\php7.4.33\` | FastCGI `:9074` |
-| PHP 8.0.30 | `C:\web\php8.0.30\` | FastCGI `:9080` |
-| PHP 8.4.26 | `C:\web\php8.4.26\` | FastCGI `:9084` |
-| Mailpit | `C:\web\mailpit\` | Local SMTP catcher — SMTP `:1025`, UI `:8025` |
-| Site files | `C:\web\htdocs\` | Document root + panel |
+| Apache 2.4 | `<install>\Apache24\` | [Apache Lounge](https://www.apachelounge.com/download/) Win32 VS18 |
+| PHP 7.4.33 | `<install>\php7.4.33\` | FastCGI `:9074` |
+| PHP 8.0.30 | `<install>\php8.0.30\` | FastCGI `:9080` |
+| PHP 8.4.26 | `<install>\php8.4.26\` | FastCGI `:9084` |
+| Mailpit | `<install>\mailpit\` | Local SMTP catcher — SMTP `:1025`, UI `:8025` |
+| Site files | `<install>\htdocs\` | Document root + panel |
+| Scripts | `<install>\scripts\` | Optional helpers (tray, mail, php-only, …) |
 | Control panel | [http://localhost/panel/](http://localhost/panel/) | Localhost only |
+
+### Screenshots
+
+| Panel | Sites | PHP Config |
+|:-----:|:-----:|:----------:|
+| ![Overview](pic/panel-overview.png) | ![Sites](pic/panel-sites.png) | ![PHP Config](pic/panel-php-config.png) |
+
+| Mailpit | phpMyAdmin | System tray |
+|:-------:|:----------:|:-----------:|
+| ![Mailpit](pic/mailpit.png) | ![phpMyAdmin](pic/phpmyadmin.png) | ![Tray menu](pic/tray_menu.png) |
 
 ---
 
@@ -104,23 +117,23 @@ ext\
 3. Create `logs\` under each PHP folder if missing.
 4. Enable common extensions as needed (`mysqli`, `pdo_mysql`, `mbstring`, `openssl`, `curl`, …).
 
-> **Note:** This stack runs PHP as **FastCGI** (`php-cgi.exe` on ports 9074 / 9080 / 9084), not as an Apache module. Folder names and ports are wired in `htdocs\panel\includes\bootstrap.php` and `start-php-silent.vbs`.
+> **Note:** This stack runs PHP as **FastCGI** (`php-cgi.exe` on ports 9074 / 9080 / 9084), not as an Apache module. Folder names and ports are wired in `htdocs\panel\includes\bootstrap.php` and `scripts\start-php-silent.vbs`.
 
 ---
 
 ## 3. Layout after install
 
 ```text
-C:\web\
+<install>\
   Apache24\          ← from Apache Lounge zip
   php7.4.33\         ← PHP TS x86
   php8.0.30\
   php8.4.26\
   mailpit\           ← Mailpit binary (local mail catcher)
   htdocs\            ← sites + panel + phpMyAdmin
-  start-stack.bat
-  start-tray.bat
-  …
+  scripts\           ← optional helpers (tray, mail, php-only, …)
+  start.bat          ← single root startup
+  tray\
 ```
 
 Apache, PHP zips, Mailpit binary, and logs are gitignored; the panel, scripts, and config templates stay in the repo.
@@ -166,10 +179,10 @@ Restart the PHP FastCGI worker after changing these (panel → **Restart PHP**, 
 
 | Action | Command |
 |--------|---------|
-| Start | `start-mailpit.bat` |
-| Stop | `stop-mailpit.bat` |
+| Start | `scripts\start-mailpit.bat` |
+| Stop | `scripts\stop-mailpit.bat` |
 
-Mailpit also starts with `start-stack.bat` / the system tray.
+Mailpit also starts with root `start.bat` / the system tray.
 
 ---
 
@@ -177,11 +190,12 @@ Mailpit also starts with `start-stack.bat` / the system tray.
 
 | Action | Command |
 |--------|---------|
-| Start Apache + PHP + Mail (silent) | `start-stack.bat` or `start-stack-silent.vbs` |
-| System tray | `start-tray.bat` |
-| PHP only | `start-php.bat` |
-| Mail only | `start-mailpit.bat` |
-| Stop non-default PHP | `stop-php.bat` |
+| Start Apache + PHP + Mail | `start.bat` (root) |
+| Same, from scripts | `scripts\start-stack.bat` |
+| System tray | `scripts\start-tray.bat` |
+| PHP only | `scripts\start-php.bat` |
+| Mail only | `scripts\start-mailpit.bat` |
+| Stop non-default PHP | `scripts\stop-php.bat` |
 
 Then open:
 
@@ -216,7 +230,7 @@ Saving `php.ini` creates a `.bak-*` backup. Use **Restart PHP** in PHP Config so
 - [ ] `C:\web\php7.4.33\php-cgi.exe` (and 8.0 / 8.4) present — **TS · x86**  
 - [ ] Each PHP folder has a working `php.ini` (`SMTP` → `127.0.0.1:1025`)  
 - [ ] `C:\web\mailpit\mailpit.exe` present  
-- [ ] `start-stack.bat` → http://localhost/panel/ and http://127.0.0.1:8025/ load  
+- [ ] `start.bat` → http://localhost/panel/ and http://127.0.0.1:8025/ load  
 
 ---
 

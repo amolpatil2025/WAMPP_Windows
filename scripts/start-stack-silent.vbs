@@ -1,22 +1,23 @@
 ' Fully silent stack start — default PHP + Mailpit + Apache, no console windows.
 ' On Windows Startup / tray launch: only the panel default PHP is started (not all versions).
-' Install root = folder containing this script (not a fixed C:\web).
+' This file lives in scripts\; install root is the parent folder.
 Option Explicit
 
-Dim WshShell, fso, WEB
+Dim WshShell, fso, SCRIPTS, WEB
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-WEB = fso.GetParentFolderName(WScript.ScriptFullName)
+SCRIPTS = fso.GetParentFolderName(WScript.ScriptFullName)
+WEB = fso.GetParentFolderName(SCRIPTS)
 
 ' Rewrite php.ini / Apache WEBROOT for this folder before starting listeners
-WshShell.Run "wscript //B //Nologo """ & WEB & "\write-install-root.vbs""", 0, True
+WshShell.Run "wscript //B //Nologo """ & SCRIPTS & "\write-install-root.vbs""", 0, True
 
 StartDefaultPhp
 
 ' Local mail catcher (SMTP 1025 / UI 8025)
-If fso.FileExists(WEB & "\start-mailpit-silent.vbs") Then
-  WshShell.Run "wscript //B //Nologo """ & WEB & "\start-mailpit-silent.vbs""", 0, False
+If fso.FileExists(SCRIPTS & "\start-mailpit-silent.vbs") Then
+  WshShell.Run "wscript //B //Nologo """ & SCRIPTS & "\start-mailpit-silent.vbs""", 0, False
 End If
 
 ' Apache after PHP/Mail; retry — at login port 80 can be briefly busy,
@@ -75,7 +76,7 @@ Sub StartApacheWithRetry
   Dim httpd, i
   httpd = WEB & "\Apache24\bin\httpd.exe"
   If Not fso.FileExists(httpd) Then Exit Sub
-  WshShell.Run "wscript //B //Nologo """ & WEB & "\write-install-root.vbs""", 0, True
+  WshShell.Run "wscript //B //Nologo """ & SCRIPTS & "\write-install-root.vbs""", 0, True
   For i = 1 To 6
     If IsListening(80) Then Exit Sub
     ' -d sets ServerRoot even when cwd is Startup / System32

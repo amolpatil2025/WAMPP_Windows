@@ -1,5 +1,5 @@
 # Updates Windows hosts file with Stack Panel site entries.
-# Usage: powershell -ExecutionPolicy Bypass -File <install>\update-hosts.ps1 -BlockFile <install>\htdocs\panel\data\hosts.block.txt
+# Usage: powershell -ExecutionPolicy Bypass -File <install>\scripts\update-hosts.ps1 -BlockFile <install>\htdocs\panel\data\hosts.block.txt
 
 param(
   [Parameter(Mandatory = $true)]

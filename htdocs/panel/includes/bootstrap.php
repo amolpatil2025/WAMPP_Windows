@@ -5,6 +5,7 @@ const PANEL_ROOT = __DIR__ . '/..';
 
 // Install root = folder that contains htdocs/ (not a fixed C:/web).
 define('WEB_ROOT', str_replace('\\', '/', dirname(__DIR__, 3)));
+define('SCRIPTS_DIR', WEB_ROOT . '/scripts');
 define('APACHE_BIN', WEB_ROOT . '/Apache24/bin/httpd.exe');
 define('APACHE_ROOT', WEB_ROOT . '/Apache24');
 
@@ -343,7 +344,7 @@ function pids_on_port(int $port): array
 
 function start_hidden(string $command): void
 {
-    $runner = WEB_ROOT . '/run-hidden.vbs';
+    $runner = SCRIPTS_DIR . '/run-hidden.vbs';
     // Quote the whole command as a single VBS argument.
     $cmd = 'wscript //B //Nologo "' . $runner . '" "' . str_replace('"', '""', $command) . '"';
     pclose(popen($cmd, 'r'));
@@ -471,12 +472,12 @@ function restart_apache_process(bool $deferred = false): array
     }
     if ($deferred) {
         // Delay so the current HTTP response can finish before httpd is killed.
-        start_hidden('cmd /c "' . WEB_ROOT . '/restart-apache-delayed.bat"');
+        start_hidden('cmd /c "' . SCRIPTS_DIR . '/restart-apache-delayed.bat"');
         return ['ok' => true, 'message' => 'Apache restart scheduled', 'detail' => $check['output']];
     }
     run_cmd('taskkill /F /IM httpd.exe');
     usleep(700000);
-    start_hidden('wscript //B //Nologo "' . str_replace('/', '\\', WEB_ROOT) . '\start-httpd-silent.vbs"');
+    start_hidden('wscript //B //Nologo "' . str_replace('/', '\\', SCRIPTS_DIR) . '\start-httpd-silent.vbs"');
     usleep(900000);
     return ['ok' => true, 'message' => 'Apache restarted', 'detail' => $check['output']];
 }

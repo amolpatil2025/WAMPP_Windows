@@ -1,10 +1,11 @@
 ' Start Mailpit (local SMTP catcher + web UI) — fully hidden.
 Option Explicit
-Dim WshShell, fso, exe, dataDir, cmd, web
+Dim WshShell, fso, exe, dataDir, cmd, scripts, web
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-web = fso.GetParentFolderName(WScript.ScriptFullName)
+scripts = fso.GetParentFolderName(WScript.ScriptFullName)
+web = fso.GetParentFolderName(scripts)
 exe = web & "\mailpit\mailpit.exe"
 dataDir = web & "\mailpit\data"
 
@@ -20,7 +21,6 @@ WScript.Quit 0
 
 Function IsListening(port)
   Dim rc
-  ' /C: = literal phrase (avoids ":80 " matching Mailpit :8025)
   rc = WshShell.Run("cmd /c netstat -ano | findstr /C:"":" & port & " "" | findstr LISTENING >nul", 0, True)
   IsListening = (rc = 0)
 End Function

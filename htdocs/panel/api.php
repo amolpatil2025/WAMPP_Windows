@@ -76,7 +76,7 @@ try {
             if (!$check['ok'] && stripos($check['output'], 'Syntax OK') === false) {
                 json_out(['ok' => false, 'message' => 'Config invalid', 'detail' => $check['output']], 400);
             }
-            start_hidden('wscript //B //Nologo "' . str_replace('/', '\\', WEB_ROOT) . '\start-httpd-silent.vbs"');
+            start_hidden('wscript //B //Nologo "' . str_replace('/', '\\', SCRIPTS_DIR) . '\start-httpd-silent.vbs"');
             usleep(900000);
             json_out(['ok' => true, 'message' => 'Apache started (default PHP ' . default_php_version() . ')', 'data' => service_status()]);
 
@@ -445,7 +445,7 @@ try {
                 json_out(['ok' => false, 'message' => 'Unknown PHP version'], 400);
             }
             // Defer so this FastCGI response can finish if we are bouncing the serving PHP.
-            $bat = WEB_ROOT . '/restart-php-delayed.bat';
+            $bat = SCRIPTS_DIR . '/restart-php-delayed.bat';
             start_hidden('cmd /c "' . str_replace('/', '\\', $bat) . '" ' . $ver);
             json_out([
                 'ok' => true,

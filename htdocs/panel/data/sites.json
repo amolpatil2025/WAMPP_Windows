@@ -25,5 +25,18 @@
         "enabled": true,
         "updated": "2026-09-25T15:39:42+05:30",
         "created": "2026-09-25T15:39:42+05:30"
+    },
+    {
+        "id": "openhead-test",
+        "name": "openhead",
+        "domain": "openhead.test",
+        "aliases": [
+            "openhead.test1"
+        ],
+        "root": "C:/Users/amolp/Documents/web_xampp/htdocs/openhead-test",
+        "php": "8.0",
+        "enabled": true,
+        "updated": "2026-10-10T23:27:04+05:30",
+        "created": "2026-10-10T23:27:04+05:30"
     }
 ]

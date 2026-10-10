@@ -1,0 +1,3 @@
+# --- stack-panel-sites-begin ---
+127.0.0.1 local local.host local.oe www.local.oe localoe openhead.test openhead.test1
+# --- stack-panel-sites-end ---

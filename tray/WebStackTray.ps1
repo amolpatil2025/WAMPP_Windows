@@ -33,7 +33,7 @@ function Get-DefaultPhp {
 }
 
 function Start-Hidden([string]$Command) {
-  $vbs = Join-Path $WebRoot 'run-hidden.vbs'
+  $vbs = Join-Path $WebRoot 'scripts\run-hidden.vbs'
   if (Test-Path $vbs) {
     Start-Process -FilePath 'wscript.exe' -ArgumentList @('//B', '//Nologo', "`"$vbs`"", "`"$Command`"") -WindowStyle Hidden
   } else {
@@ -42,7 +42,7 @@ function Start-Hidden([string]$Command) {
 }
 
 function Start-StackSilent {
-  $vbs = Join-Path $WebRoot 'start-stack-silent.vbs'
+  $vbs = Join-Path $WebRoot 'scripts\start-stack-silent.vbs'
   if (Test-Path $vbs) {
     Start-Process -FilePath 'wscript.exe' -ArgumentList @('//B', '//Nologo', "`"$vbs`"") -WindowStyle Hidden
   }
@@ -95,7 +95,7 @@ function Start-Apache {
   # Bring default PHP back with Apache
   Start-PhpVersion (Get-DefaultPhp)
   if (Test-Port 80) { return }
-  $vbs = Join-Path $WebRoot 'start-httpd-silent.vbs'
+  $vbs = Join-Path $WebRoot 'scripts\start-httpd-silent.vbs'
   if (Test-Path $vbs) {
     Start-Process -FilePath 'wscript.exe' -ArgumentList @('//B', '//Nologo', "`"$vbs`"") -WindowStyle Hidden
     return
@@ -107,7 +107,7 @@ function Start-Apache {
 }
 
 function Start-Mailpit {
-  $vbs = Join-Path $WebRoot 'start-mailpit-silent.vbs'
+  $vbs = Join-Path $WebRoot 'scripts\start-mailpit-silent.vbs'
   if (Test-Path $vbs) {
     Start-Process -FilePath 'wscript.exe' -ArgumentList @('//B', '//Nologo', "`"$vbs`"") -WindowStyle Hidden
   }

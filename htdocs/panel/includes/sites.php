@@ -447,7 +447,7 @@ function write_hosts_elevated(string $block): array
     }
     file_put_contents($blockFile, $block);
 
-    $ps1 = WEB_ROOT . '/update-hosts.ps1';
+    $ps1 = SCRIPTS_DIR . '/update-hosts.ps1';
     // Elevate with UAC; wait for completion.
     $cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -Command '
         . '"Start-Process -FilePath powershell -Verb RunAs -Wait -ArgumentList '
