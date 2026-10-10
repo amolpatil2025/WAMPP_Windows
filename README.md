@@ -2,7 +2,29 @@
 Download wamp server to build a reliable local web development environment on Windows with Apache, PHP, and MySQL in one stack. Set up projects, test sites before publishing, manage databases, and streamline learning or development with a practical solution for running dynamic websites offline.
 
 
-# Web Stack (Apache · PHP · MySQL · Mail)
+# Quick Start: Install & Run Web Stack on Windows
+
+1. **[Download the package](https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.2/v1.2.zip)**  
+   Click the link to download `v1.2.zip` (latest release).
+
+2. **Extract the ZIP file**  
+   Right-click the downloaded file and select "Extract All...". Choose your desired folder (e.g., `C:\web` or any location).
+
+3. **Run the stack**  
+   - Open the extracted folder.
+   - Double-click `start.bat` to launch the stack (Apache, PHP, MySQL, Mailpit).
+   - The control panel will be available at [http://localhost/panel/](http://localhost/panel/).
+
+4. **(Optional) Allow firewall access**  
+   - The first time you run `start.bat`, Windows Firewall may prompt you. Click "Allow access" for Apache/MySQL.
+
+5. **You're ready!**  
+   - Add site files to the `htdocs` folder.
+   - Manage settings and databases via the control panel.
+
+**Requirements:**  
+- Windows 8 or later  
+- [Visual C++ Redistributable (x86)](https://aka.ms/vc14/vc_redist.x86.exe) (install if not already; required for Apache/PHP)
 
 Portable Windows web stack (install folder can live anywhere) with a control panel for sites, PHP config, logs, and database tools. Start with root `start.bat`.
 
