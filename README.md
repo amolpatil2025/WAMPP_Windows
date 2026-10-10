@@ -1,3 +1,7 @@
+# WAMP Web Stack- Local Web Development Stack for Windows
+Download wamp server to build a reliable local web development environment on Windows with Apache, PHP, and MySQL in one stack. Set up projects, test sites before publishing, manage databases, and streamline learning or development with a practical solution for running dynamic websites offline.
+
+
 # Web Stack (Apache · PHP · MySQL · Mail)
 
 Portable Windows web stack (install folder can live anywhere) with a control panel for sites, PHP config, logs, and database tools. Start with root `start.bat`.
