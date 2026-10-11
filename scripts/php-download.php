@@ -232,6 +232,21 @@ if (isset($versions[$key])) {
     save_panel_settings($settings);
 }
 
+// Add php74 / localhost74 / localhost.php74 (etc.) to the Windows hosts file
+$hostSync = ['ok' => false, 'message' => ''];
+if (function_exists('sync_windows_hosts')) {
+    $hostSync = sync_windows_hosts(load_custom_sites());
+}
+
+$hostNote = '';
+if (!empty($hostSync['ok'])) {
+    $hostNote = empty($hostSync['added'])
+        ? ' · hosts ok'
+        : ' · hosts added: ' . implode(', ', $hostSync['added']);
+} elseif (($hostSync['message'] ?? '') !== '') {
+    $hostNote = ' · hosts: ' . $hostSync['message'];
+}
+
 php_download_write([
     'status' => 'done',
     'percent' => 100,
@@ -240,9 +255,11 @@ php_download_write([
     'folder' => $folder,
     'url' => $url,
     'sha256' => $sha,
-    'message' => 'PHP ' . $version . ' installed',
+    'message' => 'PHP ' . $version . ' installed' . $hostNote,
     'error' => '',
     'port' => isset($versions[$key]) ? (int)$versions[$key]['port'] : null,
+    'hosts' => $versions[$key]['hosts'] ?? [],
+    'hosts_sync' => $hostSync,
 ]);
 
 exit(0);

@@ -306,9 +306,40 @@ function regenerate_sites_vhosts(?array $sites = null): array
     ];
 }
 
+/** PHP version hosts (php74, localhost74, …) + optional localhost aliases. */
+function system_php_host_names(?array $versions = null): array
+{
+    if ($versions === null) {
+        $versions = function_exists('discover_php_versions')
+            ? discover_php_versions()
+            : (defined('PHP_VERSIONS') ? PHP_VERSIONS : []);
+    }
+    $names = [];
+    foreach ($versions as $meta) {
+        foreach ($meta['hosts'] ?? [] as $h) {
+            $h = strtolower(trim((string)$h));
+            if ($h !== '') {
+                $names[$h] = true;
+            }
+        }
+    }
+    if (defined('LOCALHOST_DOMAINS')) {
+        foreach (LOCALHOST_DOMAINS as $h) {
+            $h = strtolower(trim((string)$h));
+            if ($h !== '' && $h !== 'localhost') {
+                $names[$h] = true;
+            }
+        }
+    }
+    return array_keys($names);
+}
+
 function hosts_block_for_sites(array $sites): string
 {
     $names = [];
+    foreach (system_php_host_names() as $d) {
+        $names[$d] = true;
+    }
     foreach ($sites as $site) {
         if (empty($site['enabled'])) {
             continue;
@@ -319,9 +350,10 @@ function hosts_block_for_sites(array $sites): string
     }
     $lines = [HOSTS_BEGIN];
     if ($names) {
+        // Keep the line readable: PHP hosts first, then custom sites.
         $lines[] = '127.0.0.1 ' . implode(' ', array_keys($names));
     } else {
-        $lines[] = '# (no custom sites)';
+        $lines[] = '# (no managed hosts)';
     }
     $lines[] = HOSTS_END;
     return implode("\n", $lines) . "\n";
@@ -354,6 +386,9 @@ function parse_hosts_names(string $content): array
 function hosts_wanted_names(array $sites): array
 {
     $names = [];
+    foreach (system_php_host_names() as $d) {
+        $names[$d] = true;
+    }
     foreach ($sites as $site) {
         if (empty($site['enabled'])) {
             continue;

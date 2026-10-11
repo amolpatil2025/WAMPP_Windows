@@ -69,15 +69,12 @@ function discover_php_versions(): array
     return $out;
 }
 
+/** Hostnames without dots: 7.4 → php74 · localhost74 · localhost.php74 */
 function php_version_hosts(string $key): array
 {
     [$maj, $min] = array_map('intval', explode('.', $key . '.0'));
-    if ($min === 0) {
-        $slug = (string)$maj;
-        return ['php' . $slug, 'localhost' . $slug, 'localhost.php' . $slug];
-    }
-    $compact = $maj . $min;
-    return ['php' . $maj . '.' . $min, 'localhost' . $compact, 'localhost.php' . $compact];
+    $slug = $maj . $min; // 74, 80, 84 — never use a dotted ServerName
+    return ['php' . $slug, 'localhost' . $slug, 'localhost.php' . $slug];
 }
 
 function php_log_id(string $key): string

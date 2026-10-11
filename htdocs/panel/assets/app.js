@@ -450,6 +450,12 @@ function pollPhpDownload() {
         if (dl.status === 'done') {
           toast(dl.message || 'PHP installed');
           loadPhpReleases();
+          // Ensure php74 / localhost74 / … are in the Windows hosts file (may prompt UAC).
+          try {
+            const h = await api('sites_sync_hosts', { method: 'POST' });
+            if (h.hosts && h.hosts.ok === false) showHostsHint(h.hosts);
+            else if (h.hosts?.added?.length) toast('Hosts added: ' + h.hosts.added.join(', '));
+          } catch (_) { /* ignore */ }
           if (dl.key) {
             await phpVersionAction('start_php_version', dl.key, null);
           }
@@ -469,6 +475,7 @@ async function rescanPhp(btn) {
       state.status = data.data;
       renderStatus();
     }
+    if (data.hosts) showHostsHint(data.hosts);
     toast(data.message || 'Rescanned');
   } catch (e) {
     toast(e.message, true);

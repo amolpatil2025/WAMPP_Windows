@@ -10,7 +10,7 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=13">
+  <link rel="stylesheet" href="assets/app.css?v=14">
 </head>
 <body>
   <div class="app">
@@ -561,6 +561,6 @@ require __DIR__ . '/includes/bootstrap.php';
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="assets/app.js?v=13"></script>
+  <script src="assets/app.js?v=14"></script>
 </body>
 </html>

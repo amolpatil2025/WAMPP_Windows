@@ -148,10 +148,15 @@ try {
         case 'php_refresh':
             // Re-scan php* folders and rewrite Apache version hosts + runtime map.
             $versions = php_refresh_catalog(true);
+            $hosts = sync_windows_hosts(load_custom_sites());
+            $hostMsg = !empty($hosts['ok'])
+                ? (' · hosts ' . (empty($hosts['added']) ? 'ok' : ('added ' . implode(', ', $hosts['added']))))
+                : (' · hosts: ' . ($hosts['message'] ?? 'not updated'));
             json_out([
                 'ok' => true,
-                'message' => count($versions) . ' PHP folder(s) found',
+                'message' => count($versions) . ' PHP folder(s) found' . $hostMsg,
                 'versions' => $versions,
+                'hosts' => $hosts,
                 'data' => service_status(),
             ]);
 

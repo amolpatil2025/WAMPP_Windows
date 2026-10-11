@@ -4,7 +4,7 @@
 #!/Apache24/conf/
 #!/Apache24/conf/**
 
-# PHP Windows builds
+# PHP Windows builds (including versions downloaded from the panel)
 /php*/
 /php*/**
 
@@ -17,10 +17,8 @@
 /ftp/ftp.json
 /ftp/*.tmp
 
-# PHP download temp / progress
+# PHP download temp
 /.php-download-tmp/
-/htdocs/panel/data/php-download.json
-/htdocs/panel/data/php-runtime.json
 
 # Local mail catcher binary + DB (keep start scripts at repo root)
 /mailpit/**
@@ -42,6 +40,9 @@ Apache24/logs/
 # Machine-specific install path for Apache Define WEBROOT
 Apache24/conf/install-root.conf
 
+# Auto-generated from php* folders (panel / download) — not for git
+Apache24/conf/extra/httpd-php-versions.conf
+
 # --- htdocs: keep panel, phpmyadmin, mail-test, root index only ---
 /htdocs/**
 !/htdocs/index.php
@@ -52,14 +53,19 @@ Apache24/conf/install-root.conf
 !/htdocs/mail-test/
 !/htdocs/mail-test/**
 
-# Local panel runtime (optional; uncomment to skip machine-specific data)
+# Local panel runtime
 # /htdocs/panel/data/settings.json
 # /htdocs/panel/data/sites.json
-# /htdocs/panel/data/hosts.block.txt
 /htdocs/panel/data/*.bak*
 /htdocs/panel/data/_run_hidden.vbs
+/htdocs/panel/data/hosts.block.txt
+
+# Dynamic PHP install / download state (must come after !/htdocs/panel/**)
+/htdocs/panel/data/php-runtime.json
+/htdocs/panel/data/php-download.json
 
 # --- Keep (not ignored): start.bat, scripts/, tray/, .gitignore ---
+# Keep Apache24/conf/extra/httpd-php-fpm.conf (shared localhost template)
 
 # phpMyAdmin runtime cache (must come after !/htdocs/phpmyadmin/**)
 /htdocs/phpmyadmin/tmp/
