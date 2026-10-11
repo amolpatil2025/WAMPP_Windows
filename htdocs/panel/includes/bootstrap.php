@@ -571,6 +571,7 @@ function service_status(): array
             'ui_url' => MAILPIT_UI_URL,
             'label' => 'Mailpit',
         ],
+        'ftp' => ftp_status_brief(),
         'mysql' => [
             'up' => $mysqlUp,
             'port' => DB_PORT,
@@ -798,3 +799,4 @@ function resolve_log_source(string $source, string $kind): ?array
 
 require __DIR__ . '/sites.php';
 require __DIR__ . '/phpini.php';
+require __DIR__ . '/ftp.php';

@@ -104,6 +104,7 @@ try {
                 start_php_version($ver);
             }
             start_mailpit();
+            start_ftp();
             $restart = restart_apache_process();
             if (!$restart['ok']) {
                 json_out(['ok' => false, 'message' => $restart['message'], 'detail' => $restart['detail'] ?? ''], 400);
@@ -117,6 +118,45 @@ try {
         case 'stop_mail':
             $r = stop_mailpit();
             json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => service_status()]);
+
+        case 'start_ftp':
+            $r = start_ftp();
+            json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => service_status()], $r['ok'] ? 200 : 400);
+
+        case 'stop_ftp':
+            $r = stop_ftp();
+            json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => service_status()]);
+
+        case 'restart_ftp':
+            $r = restart_ftp();
+            json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => service_status()], $r['ok'] ? 200 : 400);
+
+        case 'ftp_get':
+            json_out(['ok' => true, 'data' => ftp_panel_state()]);
+
+        case 'ftp_save_settings':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $r = ftp_save_settings($body);
+            json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => ftp_panel_state()], $r['ok'] ? 200 : 400);
+
+        case 'ftp_save_user':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $r = ftp_save_user($body);
+            json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => ftp_panel_state()], $r['ok'] ? 200 : 400);
+
+        case 'ftp_delete_user':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $r = ftp_delete_user((string)($body['name'] ?? ''));
+            json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => ftp_panel_state()], $r['ok'] ? 200 : 400);
 
         case 'config_get':
             $id = $_GET['id'] ?? '';

@@ -10,14 +10,14 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=11">
+  <link rel="stylesheet" href="assets/app.css?v=12">
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
         <strong>Stack Panel</strong>
-        <span>Apache · PHP · MySQL · Mail</span>
+        <span>Apache · PHP · MySQL · Mail · FTP</span>
       </div>
       <nav class="nav">
         <button type="button" data-view="overview" class="active">Overview</button>
@@ -26,6 +26,7 @@ require __DIR__ . '/includes/bootstrap.php';
         <button type="button" data-view="config">Config editor</button>
         <button type="button" data-view="logs">Logs</button>
         <button type="button" data-view="database">Database</button>
+        <button type="button" data-view="ftp">FTP</button>
         <button type="button" onclick="window.open('http://127.0.0.1:8025/', '_blank')">Mail inbox</button>
         <button type="button" onclick="window.open('http://localhost/phpmyadmin/', '_blank')">Phpmyadmin</button>
       </nav>
@@ -46,11 +47,11 @@ require __DIR__ . '/includes/bootstrap.php';
             <div class="ov-health-dot" id="ov-health-dot" aria-hidden="true"></div>
             <div>
               <div class="ov-health-title" id="ov-health-title">Checking stack…</div>
-              <div class="ov-health-sub" id="ov-health-sub">Apache · PHP · MySQL · Mail</div>
+              <div class="ov-health-sub" id="ov-health-sub">Apache · PHP · MySQL · Mail · FTP</div>
             </div>
           </div>
           <div class="btn-row ov-health-actions">
-            <button class="btn primary" type="button" data-action="restart_all" title="Reload Apache, PHP listeners, and Mail">Restart stack</button>
+            <button class="btn primary" type="button" data-action="restart_all" title="Reload Apache, PHP listeners, Mail, and FTP">Restart stack</button>
             <button class="btn" type="button" id="ov-start-needed" hidden>Start stopped</button>
             <button class="btn" type="button" id="refresh-status-ov">Refresh</button>
           </div>
@@ -62,7 +63,7 @@ require __DIR__ . '/includes/bootstrap.php';
               <div class="row-between ov-section-head">
                 <div>
                   <h2>Services</h2>
-                  <p class="muted">Web server, database, and local mail catcher</p>
+                  <p class="muted">Web server, database, local mail, and FTP</p>
                 </div>
               </div>
               <div class="ov-service-list" id="ov-services"></div>
@@ -106,6 +107,7 @@ require __DIR__ . '/includes/bootstrap.php';
               <ul class="ov-tips" id="ov-tips">
                 <li>Stopped PHP versions won’t serve their hosts until you start them.</li>
                 <li>Mail from PHP lands in Mailpit — nothing is sent to the internet.</li>
+                <li>Open <strong>FTP</strong> for the host, port, and upload accounts.</li>
                 <li>Use <strong>Sites</strong> to add custom domains like <code>myapp.test</code>.</li>
               </ul>
             </div>
@@ -431,6 +433,77 @@ require __DIR__ . '/includes/bootstrap.php';
         </div>
       </section>
 
+      <section class="section" id="view-ftp">
+        <div class="ftp-layout">
+          <div class="stack">
+            <div class="card" id="ftp-status-card">
+              <div id="ftp-status"><p class="muted">Loading FTP…</p></div>
+            </div>
+            <div class="card">
+              <h2>Accounts</h2>
+              <p class="muted">Each account is locked to its home folder. Paths stay inside this stack.</p>
+              <div id="ftp-users" class="sites-table-wrap"></div>
+            </div>
+            <div class="card">
+              <div class="row-between">
+                <h2>Recent log</h2>
+                <span class="muted" id="ftp-log-path"></span>
+              </div>
+              <pre class="ftp-log" id="ftp-log">No log entries yet.</pre>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="card">
+              <h2>Listener</h2>
+              <form id="ftp-settings-form" class="site-form" autocomplete="off">
+                <label>Listen
+                  <select id="ftp-bind">
+                    <option value="127.0.0.1">This computer only (127.0.0.1)</option>
+                    <option value="0.0.0.0">All interfaces</option>
+                  </select>
+                </label>
+                <label>Port
+                  <input type="number" id="ftp-port" min="1" max="65535" value="2121" required>
+                </label>
+                <p class="meta" id="ftp-bind-note">Clients on this PC connect to 127.0.0.1. Port 2121 starts as a normal user. Port 21 needs Administrator.</p>
+                <button class="btn primary" type="submit" id="ftp-save-settings">Save listener</button>
+              </form>
+            </div>
+            <div class="card">
+              <h2 id="ftp-user-form-title">Add account</h2>
+              <form id="ftp-user-form" class="site-form" autocomplete="off">
+                <input type="hidden" id="ftp-user-previous" value="">
+                <label>Username
+                  <input type="text" id="ftp-user-name" maxlength="32" placeholder="web" required>
+                </label>
+                <label>Password
+                  <input type="password" id="ftp-user-pass" autocomplete="new-password" placeholder="Required for a new account">
+                </label>
+                <label>Home folder
+                  <div class="path-row">
+                    <input type="text" id="ftp-user-home" placeholder="<?= htmlspecialchars(WEB_ROOT . '/htdocs', ENT_QUOTES, 'UTF-8') ?>" required>
+                    <button class="btn" type="button" id="ftp-use-htdocs">Use htdocs</button>
+                  </div>
+                </label>
+                <label class="check-row">
+                  <input type="checkbox" id="ftp-user-write" checked>
+                  Allow upload, delete, and rename
+                </label>
+                <label class="check-row">
+                  <input type="checkbox" id="ftp-user-enabled" checked>
+                  Enabled
+                </label>
+                <div class="btn-row">
+                  <button class="btn primary" type="submit" id="ftp-save-user">Save account</button>
+                  <button class="btn" type="button" id="ftp-user-clear">Clear</button>
+                </div>
+                <p class="meta">Leave the password blank when editing to keep the current one. A relative path such as <code>htdocs/myapp</code> is created if it sits under htdocs.</p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section" id="view-database">
         <div class="db-layout">
           <div class="db-lists">
@@ -457,6 +530,6 @@ require __DIR__ . '/includes/bootstrap.php';
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="assets/app.js?v=11"></script>
+  <script src="assets/app.js?v=12"></script>
 </body>
 </html>

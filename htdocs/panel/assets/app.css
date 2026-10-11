@@ -258,7 +258,7 @@ button.btn[hidden], a.btn[hidden], .btn[hidden] { display: none !important; }
   align-items: center;
   margin-bottom: 12px;
 }
-select, input[type="text"], textarea {
+select, input[type="text"], input[type="password"], input[type="number"], textarea {
   background: #101815;
   border: 1px solid var(--line);
   color: var(--text);
@@ -650,7 +650,7 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
   .db-layout { grid-template-columns: 1fr; }
   .db-lists { position: static; display: grid; grid-template-columns: 1fr 1fr; }
   .db-side { max-height: 240px; }
-  .sites-layout { grid-template-columns: 1fr; }
+  .sites-layout, .ftp-layout { grid-template-columns: 1fr; }
   .main { padding: 20px 16px 40px; }
 }
 
@@ -1176,6 +1176,40 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
   font-size: 0.75rem;
   color: var(--text);
 }
+
+.ftp-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr;
+  gap: 14px;
+  align-items: start;
+}
+.ftp-facts {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px 12px;
+  margin: 14px 0 0;
+  font-size: 0.88rem;
+}
+.ftp-facts dt { color: var(--muted); }
+.ftp-facts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+.ftp-log {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  background: #0b110f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+#ftp-settings-form input[type="number"] { width: 100%; }
 
 @media (max-width: 1100px) {
   .ov-layout { grid-template-columns: 1fr; }

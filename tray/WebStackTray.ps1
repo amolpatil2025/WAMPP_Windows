@@ -161,9 +161,40 @@ function Stop-Mailpit {
   }
 }
 
+function Get-FtpPort {
+  $path = Join-Path $WebRoot 'ftp\ftp.json'
+  $port = 2121
+  if (Test-Path $path) {
+    try {
+      $j = Get-Content $path -Raw | ConvertFrom-Json
+      if ($j.port) { $port = [int]$j.port }
+    } catch {}
+  }
+  if ($port -lt 1 -or $port -gt 65535) { $port = 2121 }
+  return $port
+}
+
+function Start-Ftp {
+  $vbs = Join-Path $WebRoot 'scripts\start-ftp-silent.vbs'
+  if (Test-Path $vbs) {
+    Start-Process -FilePath 'wscript.exe' -ArgumentList @('//B', '//Nologo', "`"$vbs`"") -WindowStyle Hidden
+  }
+}
+
+function Stop-Ftp {
+  $port = Get-FtpPort
+  $lines = & netstat -ano 2>$null | Select-String ":$port " | Select-String 'LISTENING'
+  foreach ($line in $lines) {
+    if ($line -match '\s(\d+)\s*$') {
+      Start-Process -FilePath 'taskkill.exe' -ArgumentList @('/F', '/PID', $Matches[1]) -WindowStyle Hidden -Wait
+    }
+  }
+}
+
 function Get-StatusText {
   $parts = @()
   $parts += if (Test-Port 80) { 'Apache: ON' } else { 'Apache: OFF' }
+  $parts += if (Test-Port (Get-FtpPort)) { 'FTP:ON' } else { 'FTP:OFF' }
   $parts += if (Test-Port 1025) { 'Mail:ON' } else { 'Mail:OFF' }
   $parts += if (Test-Port 9074) { '7.4:ON' } else { '7.4:OFF' }
   $parts += if (Test-Port 9080) { '8.0:ON' } else { '8.0:OFF' }
@@ -219,7 +250,7 @@ Add-MenuItem 'Open localhost' { Open-AppWindow -Url 'http://localhost/' -Profile
 Add-MenuItem 'Open Mail inbox' { Open-AppWindow -Url 'http://127.0.0.1:8025/' -ProfileName 'WebStackMailApp' } | Out-Null
 Add-MenuItem 'Open panel in browser' { Start-Process $PanelUrl } | Out-Null
 Add-Separator
-Add-MenuItem 'Start All (Apache + default PHP + Mail)' { Start-StackSilent; Start-Sleep -Seconds 1; Update-Tray } | Out-Null
+Add-MenuItem 'Start All (Apache + default PHP + Mail + FTP)' { Start-StackSilent; Start-Sleep -Seconds 1; Update-Tray } | Out-Null
 Add-MenuItem 'Stop PHP (keep default)' { Stop-PhpOthers; Update-Tray } | Out-Null
 Add-MenuItem 'Stop Apache' { Stop-Apache; Update-Tray } | Out-Null
 Add-MenuItem 'Restart Apache' {
@@ -231,6 +262,8 @@ Add-MenuItem 'Restart Apache' {
 } | Out-Null
 Add-MenuItem 'Start Mailpit' { Start-Mailpit; Start-Sleep -Milliseconds 600; Update-Tray } | Out-Null
 Add-MenuItem 'Stop Mailpit' { Stop-Mailpit; Update-Tray } | Out-Null
+Add-MenuItem 'Start FTP' { Start-Ftp; Start-Sleep -Milliseconds 600; Update-Tray } | Out-Null
+Add-MenuItem 'Stop FTP' { Stop-Ftp; Update-Tray } | Out-Null
 Add-Separator
 
 $statusItem = Add-MenuItem 'Status: …' $null

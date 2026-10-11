@@ -1,5 +1,5 @@
 @echo off
-REM Start Apache + default PHP + Mailpit (silent). Optional helpers live in scripts\
+REM Start Apache + default PHP + Mailpit + FTP (silent). Optional helpers live in scripts\
 
 REM Start the tray if not already running (by mutex in the script)
 set "TRAY_PS1=%~dp0tray\WebStackTray.ps1"

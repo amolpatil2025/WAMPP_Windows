@@ -1,4 +1,4 @@
-' Fully silent stack start — default PHP + Mailpit + Apache, no console windows.
+' Fully silent stack start — default PHP + Mailpit + FTP + Apache, no console windows.
 ' On Windows Startup / tray launch: only the panel default PHP is started (not all versions).
 ' This file lives in scripts\; install root is the parent folder.
 Option Explicit
@@ -18,6 +18,11 @@ StartDefaultPhp
 ' Local mail catcher (SMTP 1025 / UI 8025)
 If fso.FileExists(SCRIPTS & "\start-mailpit-silent.vbs") Then
   WshShell.Run "wscript //B //Nologo """ & SCRIPTS & "\start-mailpit-silent.vbs""", 0, False
+End If
+
+' Local FTP (default 127.0.0.1:2121)
+If fso.FileExists(SCRIPTS & "\start-ftp-silent.vbs") Then
+  WshShell.Run "wscript //B //Nologo """ & SCRIPTS & "\start-ftp-silent.vbs""", 0, False
 End If
 
 ' Apache after PHP/Mail; retry — at login port 80 can be briefly busy,

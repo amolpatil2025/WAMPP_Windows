@@ -12,7 +12,7 @@ Download wamp server to build a reliable local web development environment on Wi
 
 3. **Run the stack**  
    - Open the extracted folder.
-   - Double-click `start.bat` to launch the stack (Apache, PHP, MySQL, Mailpit).
+   - Double-click `start.bat` to launch the stack (Apache, PHP, MySQL, Mailpit, FTP).
    - The control panel will be available at [http://localhost/panel/](http://localhost/panel/).
 
 4. **(Optional) Allow firewall access**  
@@ -37,6 +37,7 @@ Portable Windows web stack (install folder can live anywhere) with a control pan
 | PHP 8.0.30 | `<install>\php8.0.30\` | FastCGI `:9080` |
 | PHP 8.4.26 | `<install>\php8.4.26\` | FastCGI `:9084` |
 | Mailpit | `<install>\mailpit\` | Local SMTP catcher — SMTP `:1025`, UI `:8025` |
+| FTP | `<install>\scripts\ftp-server.php` | Plain FTP `:2121`, accounts in `ftp\ftp.json` |
 | Site files | `<install>\htdocs\` | Document root + panel |
 | Scripts | `<install>\scripts\` | Optional helpers (tray, mail, php-only, …) |
 | Control panel | [http://localhost/panel/](http://localhost/panel/) | Localhost only |
@@ -156,6 +157,7 @@ ext\
   php8.0.30\
   php8.4.26\
   mailpit\           ← Mailpit binary (local mail catcher)
+  ftp\               ← FTP accounts + log (created on first start)
   htdocs\            ← sites + panel + phpMyAdmin
   scripts\           ← optional helpers (tray, mail, php-only, …)
   start.bat          ← single root startup
@@ -212,15 +214,46 @@ Mailpit also starts with root `start.bat` / the system tray.
 
 ---
 
-## 5. Start the stack
+## 5. Local FTP
+
+A small FTP server runs with the stack so FileZilla, WinSCP, or an editor can upload into site folders. It speaks **plain FTP** (no TLS). Each account is locked inside its home folder, and that folder has to live inside this install.
+
+| | |
+|--|--|
+| Host | `127.0.0.1` |
+| Port | `2121` (change it in the panel; `21` needs Administrator) |
+| Default account | `web` / `web` until you set a new password |
+| Home | `<install>\htdocs` |
+| Accounts | `<install>\ftp\ftp.json` |
+| Log | `<install>\ftp\logs\ftp.log` |
+| Panel | http://localhost/panel/ → **FTP** |
+
+In FileZilla set **Encryption** to **Only use plain FTP (insecure)**.
+
+The first time the panel or `start.bat` runs, it creates the `web` account. Add more accounts on the FTP page (for example home `htdocs/myapp`, read-only or upload). Saving a listener change restarts FTP when it is already running. Account changes apply on the next login.
+
+### Start / stop FTP only
 
 | Action | Command |
 |--------|---------|
-| Start Apache + PHP + Mail | `start.bat` (root) |
+| Start | `scripts\start-ftp.bat` |
+| Stop | `scripts\stop-ftp.bat` |
+
+FTP also starts with root `start.bat` / the system tray.
+
+---
+
+## 6. Start the stack
+
+| Action | Command |
+|--------|---------|
+| Start Apache + PHP + Mail + FTP | `start.bat` (root) |
 | Same, from scripts | `scripts\start-stack.bat` |
 | System tray | `scripts\start-tray.bat` |
 | PHP only | `scripts\start-php.bat` |
 | Mail only | `scripts\start-mailpit.bat` |
+| FTP only | `scripts\start-ftp.bat` |
+| Stop FTP | `scripts\stop-ftp.bat` |
 | Stop non-default PHP | `scripts\stop-php.bat` |
 
 Then open:
@@ -233,29 +266,31 @@ Then open:
 
 ---
 
-## 6. Control panel
+## 7. Control panel
 
 http://localhost/panel/ (localhost only)
 
-- **Overview** — Apache / PHP / MySQL / Mail status, start/stop, default PHP for localhost  
+- **Overview** — Apache / PHP / MySQL / Mail / FTP status, start/stop, default PHP for localhost  
 - **Sites** — custom domains, document roots, per-site PHP version, hosts sync  
 - **PHP Config** — Simple / Advanced UI: On/Off toggles, error / warning / notice levels, limits  
 - **Config editor** — raw `httpd.conf` / `php.ini`  
 - **Logs** — Apache & PHP logs with filters  
 - **Database** — browse / run SQL  
+- **FTP** — start/stop, port, and upload accounts  
 - **Mail inbox** — shortcut to Mailpit UI  
 
 Saving `php.ini` creates a `.bak-*` backup. Use **Restart PHP** in PHP Config so FastCGI workers reload the file.
 
 ---
 
-## 7. Quick checklist
+## 8. Quick checklist
 
 - [ ] VC++ x86 redistributable installed  
 - [ ] `C:\web\Apache24\bin\httpd.exe` present  
 - [ ] `C:\web\php7.4.33\php-cgi.exe` (and 8.0 / 8.4) present — **TS · x86**  
 - [ ] Each PHP folder has a working `php.ini` (`SMTP` → `127.0.0.1:1025`)  
 - [ ] `C:\web\mailpit\mailpit.exe` present  
+- [ ] FTP: panel → **FTP** shows `127.0.0.1:2121`, account `web`  
 - [ ] `start.bat` → http://localhost/panel/ and http://127.0.0.1:8025/ load  
 
 ---

@@ -13,6 +13,10 @@
 /php*/tmp/**
 **/php*/tmp/ci_session*
 
+# FTP accounts (password hashes) and runtime
+/ftp/ftp.json
+/ftp/*.tmp
+
 # Local mail catcher binary + DB (keep start scripts at repo root)
 /mailpit/**
 !/mailpit/.gitkeep

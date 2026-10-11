@@ -86,6 +86,7 @@ function overviewHealth(s) {
     { key: 'apache', ok: !!s.apache?.up, label: 'Apache' },
     { key: 'mysql', ok: !!s.mysql?.up, label: 'MySQL', optional: true },
     { key: 'mail', ok: !!s.mail?.up, label: 'Mail', optional: !s.mail?.installed },
+    { key: 'ftp', ok: !!s.ftp?.up, label: 'FTP', optional: !s.ftp?.installed },
     { key: 'php', ok: phpUp > 0, label: `PHP ${phpUp}/${phpTotal}` },
   ];
   const requiredDown = checks.filter(c => !c.optional && !c.ok);
@@ -126,8 +127,9 @@ function renderStatus() {
   if (startNeeded) {
     const needApache = !s.apache?.up;
     const needMail = s.mail?.installed !== false && !s.mail?.up;
+    const needFtp = s.ftp?.installed !== false && !s.ftp?.up;
     const needPhp = Object.values(s.php || {}).some(p => !p.up);
-    const show = needApache || needMail || needPhp;
+    const show = needApache || needMail || needFtp || needPhp;
     startNeeded.hidden = !show;
     startNeeded.textContent = 'Start stopped services';
     startNeeded.onclick = async () => {
@@ -135,6 +137,7 @@ function renderStatus() {
         setBusy(startNeeded, true);
         if (needApache) await api('start_apache');
         if (needMail) await api('start_mail');
+        if (needFtp) await api('start_ftp');
         if (needPhp) await api('start_php');
         await refreshStatus();
         toast('Stopped services started');
@@ -151,6 +154,7 @@ function renderStatus() {
   }
 
   const mail = s.mail || {};
+  const ftp = s.ftp || {};
   const services = [
     {
       id: 'apache',
@@ -197,6 +201,22 @@ function renderStatus() {
         ? []
         : [{ href: mail.ui_url || 'http://127.0.0.1:8025/', label: 'Open inbox' }],
     },
+    {
+      id: 'ftp',
+      name: 'FTP',
+      desc: 'Upload into site folders',
+      up: !!ftp.up,
+      detail: ftp.installed === false
+        ? 'php.exe not found'
+        : `Plain FTP :${ftp.port || 2121}`,
+      actions: ftp.installed === false
+        ? []
+        : ftp.up
+          ? [{ action: 'stop_ftp', label: 'Stop', className: 'danger' }]
+          : [{ action: 'start_ftp', label: 'Start', className: 'primary' }],
+      links: [{ goto: 'ftp', label: 'Accounts' }],
+      note: ftp.port_busy ? `Port ${ftp.port} is in use by another program.` : '',
+    },
   ];
 
   const svcEl = $('#ov-services');
@@ -217,8 +237,9 @@ function renderStatus() {
             ${svc.actions.map(a =>
               `<button class="btn ${a.className || ''}" type="button" data-action="${escapeAttr(a.action)}">${escapeHtml(a.label)}</button>`
             ).join('')}
-            ${svc.links.map(l =>
-              `<a class="btn" href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>`
+            ${svc.links.map(l => l.goto
+              ? `<button class="btn" type="button" data-goto="${escapeAttr(l.goto)}">${escapeHtml(l.label)}</button>`
+              : `<a class="btn" href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>`
             ).join('')}
           </div>
         </div>
@@ -226,6 +247,9 @@ function renderStatus() {
     `).join('');
     svcEl.querySelectorAll('[data-action]').forEach(b => {
       b.addEventListener('click', () => runAction(b.dataset.action, b));
+    });
+    svcEl.querySelectorAll('[data-goto]').forEach(b => {
+      b.addEventListener('click', () => showView(b.dataset.goto));
     });
   }
 
@@ -371,6 +395,7 @@ function showView(name) {
     config: ['Configuration editor', 'Edit Apache and PHP ini files'],
     logs: ['Logs', 'Parsed Apache / PHP logs by version, type, and message'],
     database: ['Database', 'Browse schemas and run SQL like phpMyAdmin'],
+    ftp: ['FTP', 'Plain FTP into folders inside this stack'],
   };
   const t = titles[name] || titles.overview;
   $('#page-title').textContent = t[0];
@@ -381,6 +406,7 @@ function showView(name) {
   if (name === 'logs') loadLogs();
   if (name === 'sites') loadSites();
   if (name === 'database') loadDatabases().catch(e => toast(e.message, true));
+  if (name === 'ftp') loadFtp().catch(e => toast(e.message, true));
 }
 
 async function loadConfig() {
@@ -1120,6 +1146,202 @@ async function savePhpIni(btn) {
   }
 }
 
+function resetFtpUserForm() {
+  $('#ftp-user-previous').value = '';
+  $('#ftp-user-name').value = '';
+  $('#ftp-user-pass').value = '';
+  $('#ftp-user-home').value = state.ftpRoot ? state.ftpRoot + '/htdocs' : 'htdocs';
+  $('#ftp-user-write').checked = true;
+  $('#ftp-user-enabled').checked = true;
+  $('#ftp-user-form-title').textContent = 'Add account';
+  syncFtpPassRequired();
+}
+
+function syncFtpPassRequired() {
+  const isNew = ($('#ftp-user-previous')?.value || '') === '';
+  const pass = $('#ftp-user-pass');
+  if (!pass) return;
+  pass.required = isNew;
+  pass.placeholder = isNew ? 'Required for a new account' : 'Leave blank to keep the current password';
+}
+
+function syncFtpBindNote() {
+  const note = $('#ftp-bind-note');
+  if (!note || !$('#ftp-bind')) return;
+  note.textContent = $('#ftp-bind').value === '0.0.0.0'
+    ? 'Other computers on your network can connect. Allow php.exe if Windows Firewall asks.'
+    : 'Clients on this PC connect to 127.0.0.1. Port 2121 starts as a normal user. Port 21 needs Administrator.';
+}
+
+function renderFtp(d) {
+  if (!d) return;
+  state.ftpRoot = d.stack_root || '';
+  state.ftpUsers = d.users || [];
+  const host = d.host || '127.0.0.1';
+  const account = state.ftpUsers.find(u => u.enabled) || null;
+  const status = $('#ftp-status');
+  if (status) {
+    status.innerHTML = `
+      <div class="row-between">
+        <div>
+          <div class="ov-service-name">FTP ${pill(!!d.up)}</div>
+          <p class="muted">Plain FTP. In FileZilla, set Encryption to “Only use plain FTP (insecure)”.</p>
+        </div>
+        <div class="btn-row">
+          ${d.installed === false ? '' : d.up
+            ? `<button class="btn" type="button" data-ftp-action="restart">Restart</button>
+               <button class="btn danger" type="button" data-ftp-action="stop">Stop</button>`
+            : `<button class="btn primary" type="button" data-ftp-action="start">Start</button>`}
+        </div>
+      </div>
+      <dl class="ftp-facts">
+        <dt>Host</dt><dd>${escapeHtml(host)}</dd>
+        ${d.bind === '0.0.0.0' && d.lan_ip ? `<dt>LAN</dt><dd>${escapeHtml(d.lan_ip)}</dd>` : ''}
+        <dt>Port</dt><dd>${escapeHtml(d.port)}</dd>
+        <dt>Passive</dt><dd>${escapeHtml(d.pasv_min)}–${escapeHtml(d.pasv_max)}</dd>
+        <dt>Account</dt><dd>${account ? escapeHtml(account.name) : 'Add an account'}</dd>
+        <dt>Password</dt><dd>${account && account.initial_password ? escapeHtml(account.initial_password) : 'Set on the account'}</dd>
+        <dt>URL</dt><dd>ftp://${escapeHtml(d.bind === '0.0.0.0' && d.lan_ip ? d.lan_ip : host)}:${escapeHtml(d.port)}/</dd>
+      </dl>
+      ${d.port_busy ? `<p class="ov-service-note">Port ${escapeHtml(d.port)} is in use by another program.</p>` : ''}
+      ${d.config_ok === false ? '<p class="ov-service-note">ftp/ftp.json could not be read.</p>' : ''}
+      ${d.installed === false ? '<p class="ov-service-note">php.exe was not found, so the FTP server cannot start.</p>' : ''}
+    `;
+  }
+
+  const typingSettings = document.activeElement && document.activeElement.closest && document.activeElement.closest('#ftp-settings-form');
+  if (!typingSettings && $('#ftp-bind')) {
+    $('#ftp-bind').value = d.bind || '127.0.0.1';
+    $('#ftp-port').value = d.port || 2121;
+    syncFtpBindNote();
+  }
+
+  const usersEl = $('#ftp-users');
+  if (usersEl) {
+    if (!state.ftpUsers.length) {
+      usersEl.innerHTML = '<p class="muted" style="padding:12px">No accounts yet.</p>';
+    } else {
+      usersEl.innerHTML = `<table class="sites-table">
+        <thead><tr><th>User</th><th>Home</th><th>Access</th><th>Password</th><th></th></tr></thead>
+        <tbody>
+          ${state.ftpUsers.map(u => `<tr>
+            <td class="mono">${escapeHtml(u.name)}</td>
+            <td class="mono">${escapeHtml(u.home)}</td>
+            <td>${u.enabled ? (u.write ? 'Upload' : 'Read only') : 'Disabled'}</td>
+            <td class="mono">${u.initial_password ? escapeHtml(u.initial_password) : 'Saved'}</td>
+            <td class="actions">
+              <button class="btn" type="button" data-ftp-edit="${escapeAttr(u.name)}">Edit</button>
+              <button class="btn danger" type="button" data-ftp-delete="${escapeAttr(u.name)}">Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    }
+  }
+
+  const logEl = $('#ftp-log');
+  if (logEl) logEl.textContent = (d.log || '').trim() || 'No log entries yet.';
+  const logPath = $('#ftp-log-path');
+  if (logPath) logPath.textContent = d.log_path || '';
+  if (!$('#ftp-user-home').value) {
+    $('#ftp-user-home').value = state.ftpRoot ? state.ftpRoot + '/htdocs' : 'htdocs';
+  }
+}
+
+async function loadFtp() {
+  const data = await api('ftp_get');
+  renderFtp(data.data);
+}
+
+async function runFtpAction(action, btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api(action);
+    if (data.data && data.data.apache) {
+      state.status = data.data;
+      renderStatus();
+    }
+    toast(data.message || 'Done');
+    await loadFtp();
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+function fillFtpUser(name) {
+  const user = (state.ftpUsers || []).find(u => u.name === name);
+  if (!user) return;
+  $('#ftp-user-previous').value = user.name;
+  $('#ftp-user-name').value = user.name;
+  $('#ftp-user-pass').value = '';
+  $('#ftp-user-home').value = user.home;
+  $('#ftp-user-write').checked = !!user.write;
+  $('#ftp-user-enabled').checked = !!user.enabled;
+  $('#ftp-user-form-title').textContent = 'Edit account';
+  syncFtpPassRequired();
+  $('#ftp-user-name').focus();
+}
+
+async function saveFtpSettings(ev) {
+  ev.preventDefault();
+  const btn = $('#ftp-save-settings');
+  try {
+    setBusy(btn, true);
+    const data = await api('ftp_save_settings', {
+      body: { bind: $('#ftp-bind').value, port: Number($('#ftp-port').value) },
+    });
+    toast(data.message || 'Saved');
+    renderFtp(data.data);
+    await refreshStatus();
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function saveFtpUser(ev) {
+  ev.preventDefault();
+  const btn = $('#ftp-save-user');
+  try {
+    setBusy(btn, true);
+    const data = await api('ftp_save_user', {
+      body: {
+        previous: $('#ftp-user-previous').value,
+        name: $('#ftp-user-name').value.trim(),
+        password: $('#ftp-user-pass').value,
+        home: $('#ftp-user-home').value.trim(),
+        write: $('#ftp-user-write').checked,
+        enabled: $('#ftp-user-enabled').checked,
+      },
+    });
+    toast(data.message || 'Saved');
+    resetFtpUserForm();
+    renderFtp(data.data);
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function deleteFtpUser(name, btn) {
+  if (!confirm('Remove FTP account ' + name + '?')) return;
+  try {
+    setBusy(btn, true);
+    const data = await api('ftp_delete_user', { body: { name } });
+    toast(data.message || 'Removed');
+    if ($('#ftp-user-previous').value === name) resetFtpUserForm();
+    renderFtp(data.data);
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
 async function restartSelectedPhp(btn) {
   const version = $('#phpini-version').value;
   try {
@@ -1138,7 +1360,10 @@ async function restartSelectedPhp(btn) {
 }
 
 function bind() {
-  $$('.nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+  $$('.nav button').forEach(b => {
+    if (!b.dataset.view) return;
+    b.addEventListener('click', () => showView(b.dataset.view));
+  });
   $$('[data-action]').forEach(b => b.addEventListener('click', () => runAction(b.dataset.action, b)));
   $('#config-select').addEventListener('change', loadConfig);
   $('#save-config').addEventListener('click', () => saveConfig($('#save-config')));
@@ -1193,6 +1418,29 @@ function bind() {
   $('#phpini-reload')?.addEventListener('click', loadPhpIni);
   $('#phpini-save')?.addEventListener('click', () => savePhpIni($('#phpini-save')));
   $('#phpini-restart')?.addEventListener('click', () => restartSelectedPhp($('#phpini-restart')));
+  $('#view-ftp')?.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('[data-ftp-action]');
+    if (actionBtn) {
+      const map = { start: 'start_ftp', stop: 'stop_ftp', restart: 'restart_ftp' };
+      runFtpAction(map[actionBtn.dataset.ftpAction], actionBtn);
+      return;
+    }
+    const edit = e.target.closest('[data-ftp-edit]');
+    if (edit) {
+      fillFtpUser(edit.dataset.ftpEdit);
+      return;
+    }
+    const del = e.target.closest('[data-ftp-delete]');
+    if (del) deleteFtpUser(del.dataset.ftpDelete, del);
+  });
+  $('#ftp-settings-form')?.addEventListener('submit', saveFtpSettings);
+  $('#ftp-user-form')?.addEventListener('submit', saveFtpUser);
+  $('#ftp-user-clear')?.addEventListener('click', resetFtpUserForm);
+  $('#ftp-use-htdocs')?.addEventListener('click', () => {
+    $('#ftp-user-home').value = state.ftpRoot ? state.ftpRoot + '/htdocs' : 'htdocs';
+  });
+  $('#ftp-bind')?.addEventListener('change', syncFtpBindNote);
+  syncFtpPassRequired();
   $$('#phpini-levels .level-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.level;
