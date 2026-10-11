@@ -20,9 +20,21 @@ function Test-Port([int]$Port) {
   return $null -ne $out
 }
 
+function Get-PhpRuntime {
+  $path = Join-Path $WebRoot 'htdocs\panel\data\php-runtime.json'
+  if (-not (Test-Path $path)) { return $null }
+  try {
+    return Get-Content $path -Raw | ConvertFrom-Json
+  } catch {
+    return $null
+  }
+}
+
 function Get-DefaultPhp {
+  $rt = Get-PhpRuntime
+  if ($rt -and $rt.default) { return [string]$rt.default }
   $settings = Join-Path $WebRoot 'htdocs\panel\data\settings.json'
-  $ver = '8.4'
+  $ver = '8.0'
   if (Test-Path $settings) {
     try {
       $j = Get-Content $settings -Raw | ConvertFrom-Json
@@ -30,6 +42,21 @@ function Get-DefaultPhp {
     } catch {}
   }
   return $ver
+}
+
+function Get-PhpMap {
+  $map = @{}
+  $rt = Get-PhpRuntime
+  if ($rt -and $rt.versions) {
+    foreach ($prop in $rt.versions.PSObject.Properties) {
+      $map[$prop.Name] = @{
+        Dir = [string]$prop.Value.dir
+        Port = [int]$prop.Value.port
+        Label = [string]$prop.Value.label
+      }
+    }
+  }
+  return $map
 }
 
 function Start-Hidden([string]$Command) {
@@ -88,11 +115,7 @@ function Open-StackPanel {
 }
 
 function Start-PhpVersion([string]$Version) {
-  $map = @{
-    '7.4' = @{ Dir = (Join-Path $WebRoot 'php7.4.33'); Port = 9074 }
-    '8.0' = @{ Dir = (Join-Path $WebRoot 'php8.0.30'); Port = 9080 }
-    '8.4' = @{ Dir = (Join-Path $WebRoot 'php8.4.26'); Port = 9084 }
-  }
+  $map = Get-PhpMap
   if (-not $map.ContainsKey($Version)) { return }
   $m = $map[$Version]
   if (Test-Port $m.Port) { return }
@@ -106,9 +129,9 @@ function Stop-PhpVersion([string]$Version, [switch]$ForceDefault) {
     [System.Windows.Forms.MessageBox]::Show("Cannot stop default PHP $Version (used by localhost).", 'Web Stack') | Out-Null
     return
   }
-  $ports = @{ '7.4' = 9074; '8.0' = 9080; '8.4' = 9084 }
-  $port = $ports[$Version]
-  if (-not $port) { return }
+  $map = Get-PhpMap
+  if (-not $map.ContainsKey($Version)) { return }
+  $port = $map[$Version].Port
   $lines = & netstat -ano 2>$null | Select-String ":$port " | Select-String 'LISTENING'
   foreach ($line in $lines) {
     if ($line -match '\s(\d+)\s*$') {
@@ -119,7 +142,7 @@ function Stop-PhpVersion([string]$Version, [switch]$ForceDefault) {
 
 function Stop-PhpOthers {
   $default = Get-DefaultPhp
-  foreach ($v in @('7.4', '8.0', '8.4')) {
+  foreach ($v in (Get-PhpMap).Keys) {
     if ($v -ne $default) { Stop-PhpVersion $v -ForceDefault }
   }
 }
@@ -196,9 +219,11 @@ function Get-StatusText {
   $parts += if (Test-Port 80) { 'Apache: ON' } else { 'Apache: OFF' }
   $parts += if (Test-Port (Get-FtpPort)) { 'FTP:ON' } else { 'FTP:OFF' }
   $parts += if (Test-Port 1025) { 'Mail:ON' } else { 'Mail:OFF' }
-  $parts += if (Test-Port 9074) { '7.4:ON' } else { '7.4:OFF' }
-  $parts += if (Test-Port 9080) { '8.0:ON' } else { '8.0:OFF' }
-  $parts += if (Test-Port 9084) { '8.4:ON' } else { '8.4:OFF' }
+  $map = Get-PhpMap
+  foreach ($key in ($map.Keys | Sort-Object)) {
+    $on = if (Test-Port $map[$key].Port) { 'ON' } else { 'OFF' }
+    $parts += "$key`:$on"
+  }
   $parts += 'default ' + (Get-DefaultPhp)
   return ($parts -join ' | ')
 }
@@ -270,12 +295,12 @@ $statusItem = Add-MenuItem 'Status: …' $null
 $statusItem.Enabled = $false
 
 Add-Separator
-Add-MenuItem 'PHP 7.4 - Start' { Start-PhpVersion '7.4'; Start-Sleep -Milliseconds 600; Update-Tray } | Out-Null
-$stop74 = Add-MenuItem 'PHP 7.4 - Stop' { Stop-PhpVersion '7.4'; Update-Tray }
-Add-MenuItem 'PHP 8.0 - Start' { Start-PhpVersion '8.0'; Start-Sleep -Milliseconds 600; Update-Tray } | Out-Null
-$stop80 = Add-MenuItem 'PHP 8.0 - Stop' { Stop-PhpVersion '8.0'; Update-Tray }
-Add-MenuItem 'PHP 8.4 - Start' { Start-PhpVersion '8.4'; Start-Sleep -Milliseconds 600; Update-Tray } | Out-Null
-$stop84 = Add-MenuItem 'PHP 8.4 - Stop' { Stop-PhpVersion '8.4'; Update-Tray }
+$phpStopItems = @{}
+foreach ($key in ((Get-PhpMap).Keys | Sort-Object)) {
+  $k = $key
+  Add-MenuItem ("PHP $k - Start") { Start-PhpVersion $k; Start-Sleep -Milliseconds 600; Update-Tray }.GetNewClosure() | Out-Null
+  $phpStopItems[$k] = Add-MenuItem ("PHP $k - Stop") { Stop-PhpVersion $k; Update-Tray }.GetNewClosure()
+}
 
 Add-Separator
 Add-MenuItem 'Exit tray' {
@@ -294,12 +319,11 @@ function Update-Tray {
   $notify.Text = $text
   $statusItem.Text = Get-StatusText
   $default = Get-DefaultPhp
-  $stop74.Enabled = ($default -ne '7.4')
-  $stop80.Enabled = ($default -ne '8.0')
-  $stop84.Enabled = ($default -ne '8.4')
-  if ($default -eq '7.4') { $stop74.Text = 'PHP 7.4 - Stop (default)' } else { $stop74.Text = 'PHP 7.4 - Stop' }
-  if ($default -eq '8.0') { $stop80.Text = 'PHP 8.0 - Stop (default)' } else { $stop80.Text = 'PHP 8.0 - Stop' }
-  if ($default -eq '8.4') { $stop84.Text = 'PHP 8.4 - Stop (default)' } else { $stop84.Text = 'PHP 8.4 - Stop' }
+  foreach ($key in $phpStopItems.Keys) {
+    $item = $phpStopItems[$key]
+    $item.Enabled = ($default -ne $key)
+    $item.Text = if ($default -eq $key) { "PHP $key - Stop (default)" } else { "PHP $key - Stop" }
+  }
 }
 
 $timer = New-Object System.Windows.Forms.Timer

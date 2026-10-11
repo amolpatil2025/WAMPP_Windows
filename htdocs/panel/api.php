@@ -119,6 +119,116 @@ try {
             $r = stop_mailpit();
             json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => service_status()]);
 
+        case 'php_available':
+            $r = php_available_releases();
+            json_out([
+                'ok' => $r['ok'],
+                'message' => $r['message'],
+                'releases' => $r['releases'],
+                'download' => php_download_status(),
+                'installed' => PHP_VERSIONS,
+            ], $r['ok'] ? 200 : 400);
+
+        case 'php_download':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $ver = (string)($body['version'] ?? $body['key'] ?? '');
+            $r = php_start_download($ver);
+            json_out([
+                'ok' => $r['ok'],
+                'message' => $r['message'],
+                'download' => $r['data'] ?? php_download_status(),
+            ], $r['ok'] ? 200 : 400);
+
+        case 'php_download_status':
+            json_out(['ok' => true, 'download' => php_download_status(), 'data' => service_status()]);
+
+        case 'php_refresh':
+            // Re-scan php* folders and rewrite Apache version hosts + runtime map.
+            $versions = php_refresh_catalog(true);
+            json_out([
+                'ok' => true,
+                'message' => count($versions) . ' PHP folder(s) found',
+                'versions' => $versions,
+                'data' => service_status(),
+            ]);
+
+        case 'db_settings_get':
+            $cfg = db_settings();
+            $test = db_test_connection($cfg);
+            json_out([
+                'ok' => true,
+                'settings' => [
+                    'host' => $cfg['host'],
+                    'port' => $cfg['port'],
+                    'user' => $cfg['user'],
+                    'pass' => $cfg['pass'],
+                ],
+                'connected' => !empty($test['ok']),
+                'version' => $test['version'] ?? null,
+                'error' => $test['ok'] ? null : ($test['message'] ?? null),
+            ]);
+
+        case 'db_settings_save':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $r = save_db_settings($body);
+            if (!$r['ok']) {
+                json_out(['ok' => false, 'message' => $r['message']], 400);
+            }
+            $cfg = [
+                'host' => trim((string)($body['host'] ?? '')),
+                'port' => (int)($body['port'] ?? 3306),
+                'user' => (string)($body['user'] ?? ''),
+                'pass' => (string)($body['pass'] ?? ''),
+            ];
+            $test = db_test_connection($cfg);
+            json_out([
+                'ok' => true,
+                'message' => $r['message'] . ($test['ok'] ? ' · connection OK' : ' · could not connect yet'),
+                'connected' => !empty($test['ok']),
+                'version' => $test['version'] ?? null,
+                'error' => $test['ok'] ? null : ($test['message'] ?? null),
+                'settings' => $cfg,
+                'data' => service_status(),
+            ]);
+
+        case 'db_settings_test':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $cfg = [
+                'host' => trim((string)($body['host'] ?? db_settings()['host'])),
+                'port' => (int)($body['port'] ?? db_settings()['port']),
+                'user' => (string)($body['user'] ?? db_settings()['user']),
+                'pass' => array_key_exists('pass', $body) ? (string)$body['pass'] : db_settings()['pass'],
+            ];
+            $test = db_test_connection($cfg);
+            json_out([
+                'ok' => !empty($test['ok']),
+                'message' => $test['ok'] ? ('Connected · ' . ($test['version'] ?? 'MySQL')) : ($test['message'] ?? 'Failed'),
+                'version' => $test['version'] ?? null,
+            ], !empty($test['ok']) ? 200 : 400);
+
+        case 'db_create':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $name = trim((string)($body['name'] ?? ''));
+            if (!preg_match('/^[A-Za-z0-9_$]{1,64}$/', $name)) {
+                json_out(['ok' => false, 'message' => 'Database name can use letters, numbers, _ and $'], 400);
+            }
+            $db = db_connect();
+            $db->query('CREATE DATABASE `' . str_replace('`', '``', $name) . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+            $db->close();
+            json_out(['ok' => true, 'message' => 'Created database ' . $name, 'name' => $name]);
+
         case 'start_ftp':
             $r = start_ftp();
             json_out(['ok' => $r['ok'], 'message' => $r['message'], 'data' => service_status()], $r['ok'] ? 200 : 400);

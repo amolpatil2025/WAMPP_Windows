@@ -33,9 +33,7 @@ Portable Windows web stack (install folder can live anywhere) with a control pan
 | Component | Location | Notes |
 |-----------|----------|--------|
 | Apache 2.4 | `<install>\Apache24\` | [Apache Lounge](https://www.apachelounge.com/download/) Win32 VS18 |
-| PHP 7.4.33 | `<install>\php7.4.33\` | FastCGI `:9074` |
-| PHP 8.0.30 | `<install>\php8.0.30\` | FastCGI `:9080` |
-| PHP 8.4.26 | `<install>\php8.4.26\` | FastCGI `:9084` |
+| PHP (dynamic) | `<install>\phpX.Y.Z\` | Any `php*` folder with `php-cgi.exe`; ports auto-assigned |
 | Mailpit | `<install>\mailpit\` | Local SMTP catcher — SMTP `:1025`, UI `:8025` |
 | FTP | `<install>\scripts\ftp-server.php` | Plain FTP `:2121`, accounts in `ftp\ftp.json` |
 | Site files | `<install>\htdocs\` | Document root + panel |
@@ -270,12 +268,12 @@ Then open:
 
 http://localhost/panel/ (localhost only)
 
-- **Overview** — Apache / PHP / MySQL / Mail / FTP status, start/stop, default PHP for localhost  
+- **Overview** — Apache / PHP / MySQL / Mail / FTP status; PHP list is scanned from `php*` folders; download more builds from windows.php.net  
 - **Sites** — custom domains, document roots, per-site PHP version, hosts sync  
 - **PHP Config** — Simple / Advanced UI: On/Off toggles, error / warning / notice levels, limits  
 - **Config editor** — raw `httpd.conf` / `php.ini`  
 - **Logs** — Apache & PHP logs with filters  
-- **Database** — browse / run SQL  
+- **Database** — host / user / password settings, browse schemas, run SQL  
 - **FTP** — start/stop, port, and upload accounts  
 - **Mail inbox** — shortcut to Mailpit UI  
 

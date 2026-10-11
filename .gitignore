@@ -17,6 +17,11 @@
 /ftp/ftp.json
 /ftp/*.tmp
 
+# PHP download temp / progress
+/.php-download-tmp/
+/htdocs/panel/data/php-download.json
+/htdocs/panel/data/php-runtime.json
+
 # Local mail catcher binary + DB (keep start scripts at repo root)
 /mailpit/**
 !/mailpit/.gitkeep

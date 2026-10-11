@@ -149,8 +149,10 @@ function renderStatus() {
     };
   }
 
-  if ($('#default-php-select') && s.default_php) {
-    $('#default-php-select').value = s.default_php;
+  fillPhpSelects(s);
+
+  if (s.php_download?.active || s.php_download?.status === 'done' || s.php_download?.status === 'error') {
+    renderPhpDownloadProgress(s.php_download);
   }
 
   const mail = s.mail || {};
@@ -176,13 +178,14 @@ function renderStatus() {
       desc: 'Database (phpMyAdmin / panel SQL)',
       up: !!s.mysql?.up,
       detail: s.mysql?.up
-        ? (s.mysql.version ? `v${s.mysql.version} · :${s.mysql.port}` : `root@:${s.mysql.port}`)
-        : `Not detected on :${s.mysql?.port || 3306}`,
+        ? (s.mysql.version ? `v${s.mysql.version} · ${s.mysql.user}@${s.mysql.host}:${s.mysql.port}` : `${s.mysql.user}@${s.mysql.host}:${s.mysql.port}`)
+        : `${s.mysql?.user || 'root'}@${s.mysql?.host || '127.0.0.1'}:${s.mysql?.port || 3306}`,
       actions: [],
-      links: s.mysql?.up
-        ? [{ href: 'http://localhost/phpmyadmin/', label: 'phpMyAdmin' }]
-        : [],
-      note: s.mysql?.up ? '' : 'Start MySQL/MariaDB separately if you need the database.',
+      links: [
+        { goto: 'database', label: 'Configure' },
+        ...(s.mysql?.up ? [{ href: 'http://localhost/phpmyadmin/', label: 'phpMyAdmin' }] : []),
+      ],
+      note: s.mysql?.up ? '' : (s.mysql?.error || 'Start MySQL/MariaDB, or fix host/user/password in Database.'),
     },
     {
       id: 'mail',
@@ -253,11 +256,12 @@ function renderStatus() {
     });
   }
 
-  const phpCards = Object.entries(s.php || {}).map(([key, p]) => {
+  const phpEntries = Object.entries(s.php || {});
+  const phpCards = phpEntries.length ? phpEntries.map(([key, p]) => {
     const stopDisabled = p.is_default ? 'disabled title="Default PHP for localhost — cannot stop"' : '';
     const hosts = [
       ...(p.is_default ? (s.localhost_domains || []).map(h => ({ host: h, tip: 'localhost default' })) : []),
-      ...p.hosts.map(h => ({ host: h, tip: p.label })),
+      ...(p.hosts || []).map(h => ({ host: h, tip: p.label })),
     ];
     return `
     <div class="ov-php ${p.up ? 'is-up' : 'is-down'}${p.is_default ? ' is-default' : ''}">
@@ -268,12 +272,13 @@ function renderStatus() {
             ${p.is_default ? '<span class="pill up">default</span>' : ''}
             ${pill(p.up)}
           </div>
-          <div class="ov-php-meta">FastCGI :${p.port}${p.is_default ? ' · serves localhost' : ''}</div>
+          <div class="ov-php-meta">FastCGI :${p.port}${p.is_default ? ' · serves localhost' : ''}${p.folder ? ' · ' + escapeHtml(p.folder) : ''}</div>
         </div>
         <div class="btn-row">
           ${p.up
             ? `<button class="btn danger" type="button" data-php-stop="${escapeAttr(key)}" ${stopDisabled}>Stop</button>`
             : `<button class="btn primary" type="button" data-php-start="${escapeAttr(key)}">Start</button>`}
+          <button class="btn" type="button" data-php-ini="${escapeAttr(key)}">php.ini</button>
         </div>
       </div>
       <div class="ov-php-hosts">
@@ -282,7 +287,7 @@ function renderStatus() {
         ).join('') || '<span class="muted">No hosts</span>'}
       </div>
     </div>`;
-  }).join('');
+  }).join('') : '<p class="muted">No <code>php*</code> folders with php-cgi.exe found. Download a build below.</p>';
   const phpEl = $('#php-cards');
   if (phpEl) {
     phpEl.innerHTML = phpCards;
@@ -290,6 +295,11 @@ function renderStatus() {
       b.addEventListener('click', () => phpVersionAction('start_php_version', b.dataset.phpStart, b)));
     $$('#php-cards [data-php-stop]').forEach(b =>
       b.addEventListener('click', () => phpVersionAction('stop_php_version', b.dataset.phpStop, b)));
+    $$('#php-cards [data-php-ini]').forEach(b =>
+      b.addEventListener('click', () => {
+        state.phpini.version = b.dataset.phpIni;
+        showView('php');
+      }));
   }
 
   const tools = [
@@ -323,9 +333,153 @@ function renderStatus() {
   }
 }
 
-async function phpVersionAction(action, version, btn) {
+function fillPhpSelects(s) {
+  const entries = Object.entries(s.php || {});
+  const opts = entries.map(([key, p]) =>
+    `<option value="${escapeAttr(key)}">${escapeHtml(p.label || ('PHP ' + key))}</option>`
+  ).join('');
+  const def = s.default_php || (entries[0] && entries[0][0]) || '';
+  ['#default-php-select', '#phpini-version'].forEach(sel => {
+    const el = $(sel);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = opts || '<option value="">No PHP installed</option>';
+    if (sel === '#default-php-select' && def) el.value = def;
+    else if (prev && [...el.options].some(o => o.value === prev)) el.value = prev;
+    else if (def) el.value = def;
+  });
+}
+
+function renderPhpDownloadProgress(dl) {
+  const el = $('#php-download-progress');
+  if (!el || !dl) return;
+  if (!dl.active && dl.status !== 'done' && dl.status !== 'error' && dl.status !== 'queued') {
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  const pct = Math.max(0, Math.min(100, Number(dl.percent) || 0));
+  const tone = dl.status === 'error' ? 'bad' : (dl.status === 'done' ? 'ok' : 'run');
+  el.innerHTML = `
+    <div class="php-dl-bar" data-tone="${tone}"><span style="width:${pct}%"></span></div>
+    <div class="php-dl-msg">${escapeHtml(dl.message || dl.status || '')}${dl.version ? ' · PHP ' + escapeHtml(dl.version) : ''}</div>`;
+}
+
+async function loadPhpReleases(btn) {
   try {
     setBusy(btn, true);
+    const data = await api('php_available');
+    renderPhpReleases(data.releases || []);
+    if (data.download) renderPhpDownloadProgress(data.download);
+  } catch (e) {
+    toast(e.message, true);
+    const box = $('#php-releases');
+    if (box) box.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+function renderPhpReleases(list) {
+  const box = $('#php-releases');
+  if (!box) return;
+  if (!list.length) {
+    box.innerHTML = '<p class="muted">No Thread-Safe x86 builds found.</p>';
+    return;
+  }
+  box.innerHTML = `<table class="sites-table">
+    <thead><tr><th>Version</th><th>Build</th><th>Size</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${list.map(r => {
+        let status = 'Available';
+        let action = `<button class="btn primary" type="button" data-php-dl="${escapeAttr(r.version)}">Download</button>`;
+        if (r.installed) {
+          status = 'Installed';
+          action = `<button class="btn primary" type="button" data-php-start="${escapeAttr(r.key)}">Start</button>`;
+        } else if (r.installed_other) {
+          status = `Have ${escapeHtml(r.installed_folder || r.key)}`;
+          action = `<button class="btn" type="button" data-php-dl="${escapeAttr(r.version)}">Get ${escapeHtml(r.version)}</button>`;
+        }
+        return `<tr>
+          <td class="mono">PHP ${escapeHtml(r.version)}</td>
+          <td class="mono">${escapeHtml(r.build)}</td>
+          <td>${escapeHtml(r.size || '—')}</td>
+          <td>${status}</td>
+          <td class="actions">${action}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+  box.querySelectorAll('[data-php-dl]').forEach(b => {
+    b.addEventListener('click', () => startPhpDownload(b.dataset.phpDl, b));
+  });
+  box.querySelectorAll('[data-php-start]').forEach(b => {
+    b.addEventListener('click', () => phpVersionAction('start_php_version', b.dataset.phpStart, b));
+  });
+}
+
+async function startPhpDownload(version, btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api('php_download', { body: { version } });
+    toast(data.message || 'Download started');
+    renderPhpDownloadProgress(data.download);
+    pollPhpDownload();
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+let phpDlTimer = null;
+function pollPhpDownload() {
+  clearInterval(phpDlTimer);
+  phpDlTimer = setInterval(async () => {
+    try {
+      const data = await api('php_download_status');
+      const dl = data.download || {};
+      renderPhpDownloadProgress(dl);
+      if (data.data) {
+        state.status = data.data;
+        renderStatus();
+      }
+      if (!dl.active) {
+        clearInterval(phpDlTimer);
+        phpDlTimer = null;
+        if (dl.status === 'done') {
+          toast(dl.message || 'PHP installed');
+          loadPhpReleases();
+          if (dl.key) {
+            await phpVersionAction('start_php_version', dl.key, null);
+          }
+        } else if (dl.status === 'error') {
+          toast(dl.error || dl.message || 'Download failed', true);
+        }
+      }
+    } catch (_) { /* ignore poll errors */ }
+  }, 1500);
+}
+
+async function rescanPhp(btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api('php_refresh');
+    if (data.data) {
+      state.status = data.data;
+      renderStatus();
+    }
+    toast(data.message || 'Rescanned');
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function phpVersionAction(action, version, btn) {
+  try {
+    if (btn) setBusy(btn, true);
     const data = await api(action, {
       method: 'POST',
       body: { version },
@@ -339,7 +493,7 @@ async function phpVersionAction(action, version, btn) {
   } catch (e) {
     toast(e.message, true);
   } finally {
-    setBusy(btn, false);
+    if (btn) setBusy(btn, false);
   }
 }
 
@@ -394,7 +548,7 @@ function showView(name) {
     php: ['PHP Config', 'Friendly php.ini controls — errors, limits, toggles'],
     config: ['Configuration editor', 'Edit Apache and PHP ini files'],
     logs: ['Logs', 'Parsed Apache / PHP logs by version, type, and message'],
-    database: ['Database', 'Browse schemas and run SQL like phpMyAdmin'],
+    database: ['Database', 'Connection settings, browse schemas, and run SQL'],
     ftp: ['FTP', 'Plain FTP into folders inside this stack'],
   };
   const t = titles[name] || titles.overview;
@@ -407,6 +561,9 @@ function showView(name) {
   if (name === 'sites') loadSites();
   if (name === 'database') loadDatabases().catch(e => toast(e.message, true));
   if (name === 'ftp') loadFtp().catch(e => toast(e.message, true));
+  if (name === 'overview') {
+    if (!$('#php-releases')?.children.length) loadPhpReleases().catch(() => {});
+  }
 }
 
 async function loadConfig() {
@@ -451,6 +608,7 @@ async function loadLogs() {
     fillCategoryFilter(state.logs.entries);
     renderLogRows();
     $('#log-view').textContent = data.content || '(empty)';
+    if (data.sources) renderLogSourceTabs(data.sources);
     syncLogKindTabs(source);
   } catch (e) {
     toast(e.message, true);
@@ -458,7 +616,7 @@ async function loadLogs() {
 }
 
 function syncLogKindTabs(source) {
-  const phpOnly = source === 'php74' || source === 'php80' || source === 'php84';
+  const phpOnly = /^php\d/.test(source || '');
   $$('#log-kind-tabs .log-kind').forEach(btn => {
     if (btn.dataset.kind === 'php') {
       btn.classList.toggle('hidden', !phpOnly);
@@ -468,6 +626,20 @@ function syncLogKindTabs(source) {
     state.logs.kind = 'error';
     $$('#log-kind-tabs .log-kind').forEach(b => b.classList.toggle('active', b.dataset.kind === 'error'));
   }
+}
+
+function renderLogSourceTabs(sources) {
+  const wrap = $('#log-source-tabs');
+  if (!wrap || !sources) return;
+  const order = Object.keys(sources);
+  wrap.innerHTML = order.map(sid => {
+    const label = sources[sid].label || sid;
+    const active = (state.logs.source || 'apache') === sid ? ' active' : '';
+    return `<button type="button" class="log-tab${active}" data-source="${escapeAttr(sid)}">${escapeHtml(label)}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.log-tab').forEach(b => {
+    b.addEventListener('click', () => setLogSource(b.dataset.source));
+  });
 }
 
 function renderLogCounts(counts) {
@@ -597,13 +769,114 @@ function setLogKind(kind) {
   loadLogs();
 }
 
+async function loadDbSettings() {
+  try {
+    const data = await api('db_settings_get');
+    const s = data.settings || {};
+    if ($('#db-host')) $('#db-host').value = s.host || '127.0.0.1';
+    if ($('#db-port')) $('#db-port').value = s.port || 3306;
+    if ($('#db-user')) $('#db-user').value = s.user || 'root';
+    if ($('#db-pass') && document.activeElement !== $('#db-pass')) $('#db-pass').value = s.pass || '';
+    const st = $('#db-conn-status');
+    if (st) {
+      if (data.connected) {
+        st.textContent = `Connected · ${data.version || 'MySQL'} · ${s.user}@${s.host}:${s.port}`;
+        st.dataset.tone = 'ok';
+      } else {
+        st.textContent = data.error || 'Not connected';
+        st.dataset.tone = 'bad';
+      }
+    }
+    return data.connected;
+  } catch (e) {
+    const st = $('#db-conn-status');
+    if (st) {
+      st.textContent = e.message;
+      st.dataset.tone = 'bad';
+    }
+    return false;
+  }
+}
+
+function collectDbForm() {
+  return {
+    host: ($('#db-host')?.value || '').trim(),
+    port: Number($('#db-port')?.value || 3306),
+    user: ($('#db-user')?.value || '').trim(),
+    pass: $('#db-pass')?.value || '',
+  };
+}
+
+async function saveDbSettings(btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api('db_settings_save', { body: collectDbForm() });
+    toast(data.message || 'Saved');
+    if (data.data) {
+      state.status = data.data;
+      renderStatus();
+    }
+    await loadDbSettings();
+    if (data.connected) await loadDatabases();
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function testDbSettings(btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api('db_settings_test', { body: collectDbForm() });
+    toast(data.message || 'OK');
+    const st = $('#db-conn-status');
+    if (st) {
+      st.textContent = data.message || 'Connected';
+      st.dataset.tone = 'ok';
+    }
+  } catch (e) {
+    toast(e.message, true);
+    const st = $('#db-conn-status');
+    if (st) {
+      st.textContent = e.message;
+      st.dataset.tone = 'bad';
+    }
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+async function createDatabase(btn) {
+  const name = prompt('New database name');
+  if (!name) return;
+  try {
+    setBusy(btn, true);
+    const data = await api('db_create', { body: { name: name.trim() } });
+    toast(data.message || 'Created');
+    await loadDatabases();
+    if (data.name) await selectDatabase(data.name);
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
 async function loadDatabases() {
   try {
+    const connected = await loadDbSettings();
+    if (!connected) {
+      const side = $('#db-list');
+      if (side) side.innerHTML = '<p class="muted" style="padding:12px">Fix the connection above, then refresh.</p>';
+      $('#table-list').innerHTML = '';
+      return;
+    }
     const data = await api('db_list');
     const side = $('#db-list');
-    side.innerHTML = '<div class="group">Databases</div>' + data.databases.map(db =>
+    side.innerHTML = data.databases.map(db =>
       `<button type="button" data-db="${escapeAttr(db)}" class="${state.db === db ? 'active' : ''}">${escapeHtml(db)}</button>`
-    ).join('');
+    ).join('') || '<p class="muted" style="padding:12px">No databases</p>';
     side.querySelectorAll('[data-db]').forEach(btn => {
       btn.addEventListener('click', () => selectDatabase(btn.dataset.db));
     });
@@ -615,6 +888,8 @@ async function loadDatabases() {
     }
   } catch (e) {
     toast(e.message, true);
+    const side = $('#db-list');
+    if (side) side.innerHTML = `<p class="muted" style="padding:12px">${escapeHtml(e.message)}</p>`;
   }
 }
 
@@ -1378,8 +1653,13 @@ function bind() {
   $('#site-domain')?.addEventListener('blur', () => {
     if (!$('#site-root').value) suggestSitePath();
   });
-  $$('#log-source-tabs .log-tab').forEach(b => b.addEventListener('click', () => setLogSource(b.dataset.source)));
   $$('#log-kind-tabs .log-kind').forEach(b => b.addEventListener('click', () => setLogKind(b.dataset.kind)));
+  $('#php-load-releases')?.addEventListener('click', () => loadPhpReleases($('#php-load-releases')));
+  $('#php-rescan')?.addEventListener('click', () => rescanPhp($('#php-rescan')));
+  $('#db-save-btn')?.addEventListener('click', () => saveDbSettings($('#db-save-btn')));
+  $('#db-test-btn')?.addEventListener('click', () => testDbSettings($('#db-test-btn')));
+  $('#db-create-btn')?.addEventListener('click', () => createDatabase($('#db-create-btn')));
+  $('#db-settings-form')?.addEventListener('submit', (e) => { e.preventDefault(); saveDbSettings($('#db-save-btn')); });
   $('#log-search').addEventListener('input', renderLogRows);
   $('#log-level-filter').addEventListener('change', renderLogRows);
   $('#log-category-filter').addEventListener('change', renderLogRows);
@@ -1478,6 +1758,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.phpini.version = state.status.default_php;
       if ($('#phpini-version')) $('#phpini-version').value = state.status.default_php;
     }
+    loadPhpReleases().catch(() => {});
+    if (state.status?.php_download?.active) pollPhpDownload();
   } catch (e) {
     toast(e.message, true);
   }

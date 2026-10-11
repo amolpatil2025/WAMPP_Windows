@@ -651,6 +651,7 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
   .db-lists { position: static; display: grid; grid-template-columns: 1fr 1fr; }
   .db-side { max-height: 240px; }
   .sites-layout, .ftp-layout { grid-template-columns: 1fr; }
+  .db-settings-form { grid-template-columns: 1fr 1fr; }
   .main { padding: 20px 16px 40px; }
 }
 
@@ -1176,6 +1177,58 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
   font-size: 0.75rem;
   color: var(--text);
 }
+
+.php-releases {
+  margin-top: 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  max-height: 280px;
+}
+.php-dl-progress {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,0.18);
+}
+.php-dl-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #0b110f;
+  overflow: hidden;
+}
+.php-dl-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+.php-dl-bar[data-tone="bad"] span { background: var(--danger); }
+.php-dl-bar[data-tone="ok"] span { background: var(--ok); }
+.php-dl-msg {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.db-conn-card { margin-bottom: 14px; }
+.db-settings-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.db-settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+.db-settings-form input { width: 100%; }
+#db-conn-status[data-tone="ok"] { color: var(--ok); }
+#db-conn-status[data-tone="bad"] { color: var(--danger); }
 
 .ftp-layout {
   display: grid;

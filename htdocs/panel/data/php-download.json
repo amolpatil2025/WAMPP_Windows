@@ -1,0 +1,11 @@
+{
+    "status": "downloading",
+    "percent": 11,
+    "version": "7.4.33",
+    "key": "7.4",
+    "folder": "php7.4.33",
+    "url": "https://windows.php.net/downloads/releases/php-7.4.33-Win32-vc15-x86.zip",
+    "sha256": "6adcf02c02634f258f6b6b2bb666f22916c9bd986db2ccae05acb9868a35f847",
+    "message": "Downloading\u2026 11%",
+    "error": "",
+    "updated": "2026-10-11T12:22:52+05:30"

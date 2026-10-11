@@ -33,7 +33,25 @@ For Each folder In fso.GetFolder(web).SubFolders
   End If
 Next
 
+' Refresh php-runtime.json + Apache PHP version hosts from php* folders
+RefreshPhpRuntime
+
 WScript.Quit 0
+
+Sub RefreshPhpRuntime
+  Dim fold, subf, exe, sh
+  Set sh = CreateObject("WScript.Shell")
+  Set fold = fso.GetFolder(web)
+  For Each subf In fold.SubFolders
+    If LCase(Left(subf.Name, 3)) = "php" Then
+      exe = subf.Path & "\php.exe"
+      If fso.FileExists(exe) Then
+        sh.Run """" & exe & """ """ & scripts & "\refresh-php-runtime.php""", 0, True
+        Exit Sub
+      End If
+    End If
+  Next
+End Sub
 
 Sub EnsureDir(path)
   If Not fso.FolderExists(path) Then fso.CreateFolder path

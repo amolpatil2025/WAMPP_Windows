@@ -41,47 +41,42 @@ Function ReadFtpPort()
   End If
 End Function
 
-Function GetDefaultPhpVersion()
-  Dim path, raw, p, q1, q2, ver
-  GetDefaultPhpVersion = "8.0"
-  path = web & "\htdocs\panel\data\settings.json"
-  If Not fso.FileExists(path) Then Exit Function
-  raw = ReadAllText(path)
-  p = InStr(1, LCase(raw), """default_php""")
-  If p < 1 Then Exit Function
-  p = InStr(p, raw, ":")
-  If p < 1 Then Exit Function
-  q1 = InStr(p, raw, """")
-  If q1 < 1 Then Exit Function
-  q2 = InStr(q1 + 1, raw, """")
-  If q2 <= q1 Then Exit Function
-  ver = Mid(raw, q1 + 1, q2 - q1 - 1)
-  If ver = "7.4" Or ver = "8.0" Or ver = "8.4" Then GetDefaultPhpVersion = ver
-End Function
-
-Function PhpPath(ver)
-  Select Case ver
-    Case "7.4": PhpPath = web & "\php7.4.33\php.exe"
-    Case "8.0": PhpPath = web & "\php8.0.30\php.exe"
-    Case "8.4": PhpPath = web & "\php8.4.26\php.exe"
-    Case Else: PhpPath = ""
-  End Select
-End Function
-
 Function FindPhpExe()
-  Dim ver, list, i, exe
-  ver = GetDefaultPhpVersion()
-  list = Array(ver, "8.4", "8.0", "7.4")
-  For i = 0 To UBound(list)
-    exe = PhpPath(list(i))
-    If exe <> "" Then
+  Dim fold, subf, exe, phpExe, out, parts
+  FindPhpExe = ""
+  ' Prefer default from php-runtime.json
+  For Each subf In fso.GetFolder(web).SubFolders
+    If LCase(Left(subf.Name, 3)) = "php" Then
+      exe = subf.Path & "\php.exe"
       If fso.FileExists(exe) Then
-        FindPhpExe = exe
+        If FindPhpExe = "" Then FindPhpExe = exe
+        phpExe = exe
+        out = Trim(ExecCapture("""" & phpExe & """ """ & scripts & "\list-php-runtime.php"" default"))
+        If out <> "" Then
+          parts = Split(out, vbTab)
+          If UBound(parts) >= 0 Then
+            exe = Trim(parts(0)) & "\php.exe"
+            If fso.FileExists(exe) Then
+              FindPhpExe = exe
+              Exit Function
+            End If
+          End If
+        End If
         Exit Function
       End If
     End If
   Next
-  FindPhpExe = ""
+End Function
+
+Function ExecCapture(cmd)
+  Dim exec
+  On Error Resume Next
+  Set exec = WshShell.Exec("cmd /c " & cmd)
+  Do While exec.Status = 0
+    WScript.Sleep 40
+  Loop
+  ExecCapture = exec.StdOut.ReadAll
+  On Error GoTo 0
 End Function
 
 Function ReadAllText(path)

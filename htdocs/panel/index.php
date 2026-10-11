@@ -10,7 +10,7 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=12">
+  <link rel="stylesheet" href="assets/app.css?v=13">
 </head>
 <body>
   <div class="app">
@@ -73,21 +73,29 @@ require __DIR__ . '/includes/bootstrap.php';
               <div class="row-between ov-section-head">
                 <div>
                   <h2>PHP versions</h2>
-                  <p class="muted">Each version runs as FastCGI. Pick which one serves <code>localhost</code>.</p>
+                  <p class="muted">Scanned from <code>php*</code> folders. Each runs as FastCGI.</p>
                 </div>
                 <div class="ov-default-php">
                   <label class="ov-default-label" for="default-php-select">Default for localhost</label>
                   <div class="btn-row">
-                    <select id="default-php-select" aria-label="Default PHP for localhost">
-                      <option value="7.4">PHP 7.4</option>
-                      <option value="8.0">PHP 8.0</option>
-                      <option value="8.4" selected>PHP 8.4</option>
-                    </select>
+                    <select id="default-php-select" aria-label="Default PHP for localhost"></select>
                     <button class="btn primary" type="button" id="save-default-php">Apply</button>
+                    <button class="btn" type="button" id="php-rescan" title="Re-scan php* folders">Rescan</button>
                   </div>
                 </div>
               </div>
               <div class="ov-php-list" id="php-cards"></div>
+              <div class="php-download-block" id="php-download-block">
+                <div class="row-between" style="margin-top:16px">
+                  <div>
+                    <h3 style="margin:0 0 4px;font-size:0.92rem">Download PHP</h3>
+                    <p class="muted" style="margin:0">Thread-Safe x86 builds from windows.php.net (matches Apache Win32).</p>
+                  </div>
+                  <button class="btn" type="button" id="php-load-releases">Refresh list</button>
+                </div>
+                <div id="php-download-progress" class="php-dl-progress hidden"></div>
+                <div id="php-releases" class="php-releases"></div>
+              </div>
             </div>
           </div>
 
@@ -105,6 +113,7 @@ require __DIR__ . '/includes/bootstrap.php';
             <div class="card ov-hint-card">
               <h2>Tips</h2>
               <ul class="ov-tips" id="ov-tips">
+                <li>PHP versions are folders named <code>phpX.Y.Z</code> under the install root — download more below.</li>
                 <li>Stopped PHP versions won’t serve their hosts until you start them.</li>
                 <li>Mail from PHP lands in Mailpit — nothing is sent to the internet.</li>
                 <li>Open <strong>FTP</strong> for the host, port, and upload accounts.</li>
@@ -187,11 +196,7 @@ require __DIR__ . '/includes/bootstrap.php';
               <button type="button" class="mode-tab active" data-php-mode="simple">Simple</button>
               <button type="button" class="mode-tab" data-php-mode="advanced">Advanced</button>
             </div>
-            <select id="phpini-version" aria-label="PHP version">
-              <option value="7.4">PHP 7.4</option>
-              <option value="8.0">PHP 8.0</option>
-              <option value="8.4">PHP 8.4</option>
-            </select>
+            <select id="phpini-version" aria-label="PHP version"></select>
             <button class="btn" type="button" id="phpini-reload">Reload</button>
             <button class="btn primary" type="button" id="phpini-save">Save php.ini</button>
             <button class="btn warn" type="button" id="phpini-restart" title="Restart this PHP FastCGI worker">Restart PHP</button>
@@ -376,13 +381,7 @@ require __DIR__ . '/includes/bootstrap.php';
       <section class="section" id="view-logs">
         <div class="card">
           <div class="toolbar log-toolbar">
-            <div class="log-source-tabs" id="log-source-tabs" role="tablist">
-              <button type="button" class="log-tab active" data-source="apache">Apache</button>
-              <button type="button" class="log-tab" data-source="default">localhost</button>
-              <button type="button" class="log-tab" data-source="php74">PHP 7.4</button>
-              <button type="button" class="log-tab" data-source="php80">PHP 8.0</button>
-              <button type="button" class="log-tab" data-source="php84">PHP 8.4</button>
-            </div>
+            <div class="log-source-tabs" id="log-source-tabs" role="tablist"></div>
             <div class="log-kind-tabs" id="log-kind-tabs">
               <button type="button" class="log-kind active" data-kind="error">Error</button>
               <button type="button" class="log-kind" data-kind="access">Access</button>
@@ -505,9 +504,41 @@ require __DIR__ . '/includes/bootstrap.php';
       </section>
 
       <section class="section" id="view-database">
-        <div class="db-layout">
+        <div class="card db-conn-card" id="db-conn-card">
+          <div class="row-between">
+            <div>
+              <h2>Connection</h2>
+              <p class="muted" id="db-conn-status">Loading…</p>
+            </div>
+            <div class="btn-row">
+              <button class="btn" type="button" id="db-test-btn">Test</button>
+              <button class="btn primary" type="button" id="db-save-btn">Save</button>
+            </div>
+          </div>
+          <form id="db-settings-form" class="db-settings-form" autocomplete="off">
+            <label>Host
+              <input type="text" id="db-host" value="127.0.0.1" required>
+            </label>
+            <label>Port
+              <input type="number" id="db-port" min="1" max="65535" value="3306" required>
+            </label>
+            <label>Username
+              <input type="text" id="db-user" value="root" required>
+            </label>
+            <label>Password
+              <input type="password" id="db-pass" value="" autocomplete="off">
+            </label>
+          </form>
+        </div>
+        <div class="db-layout" id="db-workspace">
           <div class="db-lists">
-            <div class="db-side" id="db-list"></div>
+            <div class="db-side">
+              <div class="row-between" style="padding:8px 10px 0">
+                <div class="group" style="border:0;padding:0">Databases</div>
+                <button class="btn" type="button" id="db-create-btn" title="Create database">New</button>
+              </div>
+              <div id="db-list"></div>
+            </div>
             <div class="db-side tall" id="table-list"></div>
           </div>
           <div class="stack">
@@ -530,6 +561,6 @@ require __DIR__ . '/includes/bootstrap.php';
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="assets/app.js?v=12"></script>
+  <script src="assets/app.js?v=13"></script>
 </body>
 </html>

@@ -15,112 +15,24 @@ const MAILPIT_UI_PORT = 8025;
 const MAILPIT_UI_URL = 'http://127.0.0.1:8025/';
 define('MAILPIT_DATA', WEB_ROOT . '/mailpit/data');
 
-const DB_HOST = '127.0.0.1';
-const DB_USER = 'root';
-const DB_PASS = 'root';
-const DB_PORT = 3306;
-
-define('PHP_VERSIONS', [
-    '7.4' => [
-        'label' => 'PHP 7.4',
-        'dir' => WEB_ROOT . '/php7.4.33',
-        'port' => 9074,
-        'hosts' => ['php7', 'localhost7', 'localhost.php7'],
-    ],
-    '8.0' => [
-        'label' => 'PHP 8.0',
-        'dir' => WEB_ROOT . '/php8.0.30',
-        'port' => 9080,
-        'hosts' => ['php8', 'localhost8', 'localhost.php8'],
-    ],
-    '8.4' => [
-        'label' => 'PHP 8.4',
-        'dir' => WEB_ROOT . '/php8.4.26',
-        'port' => 9084,
-        'hosts' => ['php8.4', 'localhost84', 'localhost.php84'],
-    ],
-]);
-
 const LOCALHOST_DOMAINS = ['localhost', 'latest', 'localhost.latest'];
-
 const SETTINGS_FILE = PANEL_ROOT . '/data/settings.json';
 
-define('CONFIG_FILES', [
-    'httpd' => [
-        'label' => 'Apache httpd.conf',
-        'path' => APACHE_ROOT . '/conf/httpd.conf',
-    ],
-    'php-fpm' => [
-        'label' => 'Apache PHP vhosts',
-        'path' => APACHE_ROOT . '/conf/extra/httpd-php-fpm.conf',
-    ],
-    'php74' => [
-        'label' => 'php.ini (7.4)',
-        'path' => WEB_ROOT . '/php7.4.33/php.ini',
-    ],
-    'php80' => [
-        'label' => 'php.ini (8.0)',
-        'path' => WEB_ROOT . '/php8.0.30/php.ini',
-    ],
-    'php84' => [
-        'label' => 'php.ini (8.4)',
-        'path' => WEB_ROOT . '/php8.4.26/php.ini',
-    ],
-]);
+require __DIR__ . '/php-versions.php';
 
-define('LOG_FILES', [
-    'error' => APACHE_ROOT . '/logs/error_log',
-    'php74' => APACHE_ROOT . '/logs/php74-error.log',
-    'php80' => APACHE_ROOT . '/logs/php80-error.log',
-    'php84' => APACHE_ROOT . '/logs/php84-error.log',
-]);
+$_phpVersions = php_refresh_catalog(true);
+define('PHP_VERSIONS', $_phpVersions);
+define('CONFIG_FILES', build_php_config_files($_phpVersions));
+define('LOG_FILES', build_php_log_files($_phpVersions));
+define('LOG_SOURCES', build_php_log_sources($_phpVersions));
+unset($_phpVersions);
 
-/** Structured log catalog: source -> kind -> path */
-define('LOG_SOURCES', [
-    'apache' => [
-        'label' => 'Apache',
-        'domains' => ['*'],
-        'kinds' => [
-            'error' => ['label' => 'Error', 'path' => APACHE_ROOT . '/logs/error_log', 'format' => 'apache_error'],
-            'access' => ['label' => 'Access', 'path' => APACHE_ROOT . '/logs/access_log', 'format' => 'apache_access'],
-        ],
-    ],
-    'default' => [
-        'label' => 'localhost',
-        'domains' => ['localhost', 'latest', 'localhost.latest'],
-        'kinds' => [
-            'error' => ['label' => 'Vhost error', 'path' => APACHE_ROOT . '/logs/php-default-error.log', 'format' => 'apache_error'],
-            'access' => ['label' => 'Access', 'path' => APACHE_ROOT . '/logs/php-default-access.log', 'format' => 'apache_access'],
-        ],
-    ],
-    'php74' => [
-        'label' => 'PHP 7.4',
-        'domains' => ['php7', 'localhost7', 'localhost.php7'],
-        'kinds' => [
-            'error' => ['label' => 'Vhost error', 'path' => APACHE_ROOT . '/logs/php74-error.log', 'format' => 'apache_error'],
-            'access' => ['label' => 'Access', 'path' => APACHE_ROOT . '/logs/php74-access.log', 'format' => 'apache_access'],
-            'php' => ['label' => 'PHP runtime', 'path' => WEB_ROOT . '/php7.4.33/logs/php_errors.log', 'format' => 'php_error'],
-        ],
-    ],
-    'php80' => [
-        'label' => 'PHP 8.0',
-        'domains' => ['php8', 'localhost8', 'localhost.php8'],
-        'kinds' => [
-            'error' => ['label' => 'Vhost error', 'path' => APACHE_ROOT . '/logs/php80-error.log', 'format' => 'apache_error'],
-            'access' => ['label' => 'Access', 'path' => APACHE_ROOT . '/logs/php80-access.log', 'format' => 'apache_access'],
-            'php' => ['label' => 'PHP runtime', 'path' => WEB_ROOT . '/php8.0.30/logs/php_errors.log', 'format' => 'php_error'],
-        ],
-    ],
-    'php84' => [
-        'label' => 'PHP 8.4',
-        'domains' => ['php8.4', 'localhost84', 'localhost.php84'],
-        'kinds' => [
-            'error' => ['label' => 'Vhost error', 'path' => APACHE_ROOT . '/logs/php84-error.log', 'format' => 'apache_error'],
-            'access' => ['label' => 'Access', 'path' => APACHE_ROOT . '/logs/php84-access.log', 'format' => 'apache_access'],
-            'php' => ['label' => 'PHP runtime', 'path' => WEB_ROOT . '/php8.4.26/logs/php_errors.log', 'format' => 'php_error'],
-        ],
-    ],
-]);
+$_db = panel_settings_raw()['db'];
+define('DB_HOST', (string)($_db['host'] ?? '127.0.0.1'));
+define('DB_USER', (string)($_db['user'] ?? 'root'));
+define('DB_PASS', (string)($_db['pass'] ?? 'root'));
+define('DB_PORT', (int)($_db['port'] ?? 3306));
+unset($_db);
 
 /** Keep Apache Define WEBROOT in sync with this install folder. */
 function ensure_apache_install_root(): void
@@ -298,20 +210,80 @@ function run_cmd(string $command): array
 
 function panel_settings(): array
 {
-    $defaults = ['default_php' => '8.4'];
-    if (!is_file(SETTINGS_FILE)) {
-        return $defaults;
-    }
-    $raw = @file_get_contents(SETTINGS_FILE);
-    $data = json_decode((string)$raw, true);
-    if (!is_array($data)) {
-        return $defaults;
-    }
-    $out = array_merge($defaults, $data);
+    $out = panel_settings_raw();
     if (!isset(PHP_VERSIONS[$out['default_php']])) {
-        $out['default_php'] = '8.4';
+        $keys = array_keys(PHP_VERSIONS);
+        $out['default_php'] = $keys ? (string)end($keys) : '';
     }
     return $out;
+}
+
+function db_settings(): array
+{
+    $db = panel_settings()['db'] ?? [];
+    return [
+        'host' => (string)($db['host'] ?? DB_HOST),
+        'port' => (int)($db['port'] ?? DB_PORT),
+        'user' => (string)($db['user'] ?? DB_USER),
+        'pass' => (string)($db['pass'] ?? DB_PASS),
+    ];
+}
+
+function save_db_settings(array $in): array
+{
+    $host = trim((string)($in['host'] ?? ''));
+    $user = (string)($in['user'] ?? '');
+    $pass = (string)($in['pass'] ?? '');
+    $port = (int)($in['port'] ?? 0);
+    if ($host === '' || !preg_match('/^[A-Za-z0-9._:-]+$/', $host)) {
+        return ['ok' => false, 'message' => 'Host looks invalid'];
+    }
+    if ($port < 1 || $port > 65535) {
+        return ['ok' => false, 'message' => 'Port must be between 1 and 65535'];
+    }
+    if ($user === '' || strlen($user) > 128) {
+        return ['ok' => false, 'message' => 'Username is required'];
+    }
+    if (strlen($pass) > 256) {
+        return ['ok' => false, 'message' => 'Password is too long'];
+    }
+    $settings = panel_settings();
+    $settings['db'] = [
+        'host' => $host,
+        'port' => $port,
+        'user' => $user,
+        'pass' => $pass,
+    ];
+    if (!save_panel_settings($settings)) {
+        return ['ok' => false, 'message' => 'Could not save database settings'];
+    }
+    return ['ok' => true, 'message' => 'Database settings saved · reconnects on the next request'];
+}
+
+function db_test_connection(?array $cfg = null): array
+{
+    $cfg = $cfg ?? db_settings();
+    if (!extension_loaded('mysqli')) {
+        return ['ok' => false, 'message' => 'mysqli extension is not loaded in this PHP'];
+    }
+    mysqli_report(MYSQLI_REPORT_OFF);
+    try {
+        $db = @new mysqli(
+            (string)$cfg['host'],
+            (string)$cfg['user'],
+            (string)$cfg['pass'],
+            '',
+            (int)$cfg['port']
+        );
+    } catch (Throwable $e) {
+        return ['ok' => false, 'message' => $e->getMessage()];
+    }
+    if ($db->connect_errno) {
+        return ['ok' => false, 'message' => $db->connect_error ?: ('Connect error ' . $db->connect_errno)];
+    }
+    $version = $db->server_info;
+    $db->close();
+    return ['ok' => true, 'message' => 'Connected', 'version' => $version];
 }
 
 function save_panel_settings(array $settings): bool
@@ -533,6 +505,8 @@ function service_status(): array
     foreach (PHP_VERSIONS as $key => $meta) {
         $php[$key] = [
             'label' => $meta['label'],
+            'version' => $meta['version'] ?? $key,
+            'folder' => $meta['folder'] ?? '',
             'port' => $meta['port'],
             'up' => port_listening($meta['port']),
             'hosts' => $meta['hosts'],
@@ -540,19 +514,27 @@ function service_status(): array
         ];
     }
 
-    $mysqlUp = port_listening(DB_PORT);
+    $dbCfg = db_settings();
+    $mysqlUp = port_listening((int)$dbCfg['port']);
     $mysqlVersion = null;
-    if ($mysqlUp && extension_loaded('mysqli')) {
-        try {
-            $mysqli = @new mysqli(DB_HOST, DB_USER, DB_PASS, '', DB_PORT);
-            if (!$mysqli->connect_errno) {
-                $mysqlVersion = $mysqli->server_info;
-                $mysqli->close();
+    $mysqlError = null;
+    if (extension_loaded('mysqli')) {
+        $test = db_test_connection($dbCfg);
+        if ($test['ok']) {
+            $mysqlUp = true;
+            $mysqlVersion = $test['version'] ?? null;
+        } else {
+            $mysqlError = $test['message'];
+            if (!$mysqlUp) {
+                // port closed and connect failed
+            } else {
+                // port open but auth/host wrong
+                $mysqlUp = false;
             }
-        } catch (Throwable $e) {
-            $mysqlVersion = null;
         }
     }
+
+    $dl = php_download_status();
 
     return [
         'apache' => [
@@ -562,6 +544,7 @@ function service_status(): array
         'php' => $php,
         'default_php' => $default,
         'localhost_domains' => LOCALHOST_DOMAINS,
+        'php_download' => $dl,
         'mail' => [
             'up' => port_listening(MAILPIT_SMTP_PORT),
             'installed' => is_file(MAILPIT_BIN),
@@ -574,9 +557,11 @@ function service_status(): array
         'ftp' => ftp_status_brief(),
         'mysql' => [
             'up' => $mysqlUp,
-            'port' => DB_PORT,
+            'port' => (int)$dbCfg['port'],
+            'host' => $dbCfg['host'],
             'version' => $mysqlVersion,
-            'user' => DB_USER,
+            'user' => $dbCfg['user'],
+            'error' => $mysqlError,
         ],
         'runtime' => [
             'php' => PHP_VERSION,
@@ -588,8 +573,9 @@ function service_status(): array
 
 function db_connect(?string $database = null): mysqli
 {
+    $cfg = db_settings();
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-    $db = new mysqli(DB_HOST, DB_USER, DB_PASS, $database ?? '', DB_PORT);
+    $db = new mysqli($cfg['host'], $cfg['user'], $cfg['pass'], $database ?? '', $cfg['port']);
     $db->set_charset('utf8mb4');
     return $db;
 }
