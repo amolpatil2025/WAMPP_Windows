@@ -70,3 +70,4 @@ Apache24/conf/extra/httpd-php-versions.conf
 # phpMyAdmin runtime cache (must come after !/htdocs/phpmyadmin/**)
 /htdocs/phpmyadmin/tmp/
 /htdocs/phpmyadmin/tmp/**
+Apache24/conf/extra/httpd-php-versions.conf
