@@ -93,7 +93,7 @@ function overviewHealth(s) {
   const optionalDown = checks.filter(c => c.optional && !c.ok);
   let tone = 'ok';
   let title = 'Everything looks good';
-  let sub = checks.map(c => `${c.label}: ${c.ok ? 'on' : 'off'}`).join(' · ');
+  let sub = '';
   if (requiredDown.length) {
     tone = 'bad';
     title = requiredDown.map(c => c.label).join(', ') + ' stopped';
@@ -103,10 +103,10 @@ function overviewHealth(s) {
     const bits = [];
     if (phpUp < phpTotal) bits.push(`${phpTotal - phpUp} PHP version(s) idle`);
     optionalDown.forEach(c => bits.push(`${c.label} off`));
-    title = 'Stack usable — some parts idle';
+    title = 'Some parts are idle';
     sub = bits.join(' · ');
   }
-  return { tone, title, sub, requiredDown, phpUp, phpTotal };
+  return { tone, title, sub, requiredDown, phpUp, phpTotal, checks };
 }
 
 function renderStatus() {
@@ -120,6 +120,12 @@ function renderStatus() {
     healthEl.dataset.tone = health.tone;
     $('#ov-health-title').textContent = health.title;
     $('#ov-health-sub').textContent = health.sub;
+    const chips = $('#ov-health-chips');
+    if (chips) {
+      chips.innerHTML = (health.checks || []).map(c =>
+        `<span class="health-chip ${c.ok ? 'is-on' : 'is-off'}">${escapeHtml(c.label)}</span>`
+      ).join('');
+    }
     if (dot) dot.dataset.tone = health.tone;
   }
 

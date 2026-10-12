@@ -35,7 +35,7 @@ a:hover { text-decoration: underline; }
 
 .app {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px 1fr;
   min-height: 100vh;
 }
 
@@ -51,42 +51,45 @@ a:hover { text-decoration: underline; }
 
 .brand {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 22px;
-  padding: 0 4px;
+  margin-bottom: 18px;
+  padding: 2px 8px 14px;
+  border-bottom: 1px solid var(--line);
 }
 .brand-mark {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   background: #fff;
-  border-radius: 10px;
+  border-radius: 14px;
   flex: none;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
 }
 .brand-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .brand strong {
-  font-size: 0.98rem;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  font-size: 1.05rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 .brand span {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
-.app-logo {
-  display: block;
-  width: min(100%, 520px);
-  height: auto;
-  border-radius: 12px;
-  margin-bottom: 14px;
+.nav-label {
+  margin: 12px 12px 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .nav {
@@ -1001,7 +1004,43 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
 .ov-health-sub {
   color: var(--muted);
   font-size: 0.8rem;
-  margin-top: 3px;
+  margin-top: 8px;
+}
+.ov-health-sub:empty { display: none; }
+.ov-health-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.health-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: #121a17;
+  color: var(--muted);
+}
+.health-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.health-chip.is-on {
+  color: var(--ok);
+  border-color: rgba(61, 207, 154, 0.28);
+  background: rgba(61, 207, 154, 0.08);
+}
+.health-chip.is-off {
+  color: var(--danger);
+  border-color: rgba(229, 115, 107, 0.35);
+  background: rgba(229, 115, 107, 0.08);
 }
 .ov-health-actions { flex-shrink: 0; }
 
@@ -1032,28 +1071,23 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
 }
 
 .ov-service-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
 }
 .ov-service {
-  display: grid;
-  grid-template-columns: 10px 1fr;
-  gap: 14px;
-  padding: 14px 4px;
-  border-top: 1px solid rgba(42,58,52,0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  border-radius: 12px;
+  background: #121a17;
 }
-.ov-service:first-child { border-top: 0; padding-top: 8px; }
-.ov-service-status {
-  width: 10px;
-  border-radius: 999px;
-  margin-top: 4px;
-  background: var(--danger);
-  opacity: 0.85;
-  min-height: 42px;
-}
-.ov-service.is-up .ov-service-status { background: var(--ok); }
+.ov-service.is-up { border-left-color: var(--ok); }
+.ov-service-status { display: none; }
 .ov-service-top {
   display: flex;
   justify-content: space-between;
@@ -1076,12 +1110,13 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
 }
 .ov-service-detail {
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--muted);
   text-align: right;
+  line-height: 1.4;
 }
 .ov-service-note {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   font-size: 0.78rem;
   color: var(--warn);
 }
@@ -1089,7 +1124,7 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 2px;
 }
 .ov-service-actions .btn { padding: 7px 11px; font-size: 0.8rem; }
 
@@ -1320,5 +1355,6 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
 
 @media (max-width: 1100px) {
   .ov-layout { grid-template-columns: 1fr; }
+  .ov-service-list { grid-template-columns: 1fr; }
   .ov-default-php { align-items: flex-start; }
 }

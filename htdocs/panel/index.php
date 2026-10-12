@@ -11,16 +11,16 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=16">
+  <link rel="stylesheet" href="assets/app.css?v=17">
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
-      <div class="brand">
+      <div class="brand" title="PatilWeb Control Panel for Windows Apache Server">
         <img class="brand-mark" src="assets/patilweb-logo.jpg" alt="">
         <div class="brand-copy">
           <strong>PatilWeb CPanel</strong>
-          <span>PatilWeb Control Panel for Windows Apache Server</span>
+          <span>Control Panel for<br>Windows Apache Server</span>
         </div>
       </div>
       <nav class="nav">
@@ -31,8 +31,9 @@ require __DIR__ . '/includes/bootstrap.php';
         <button type="button" data-view="logs">Logs</button>
         <button type="button" data-view="database">Database</button>
         <button type="button" data-view="ftp">FTP</button>
+        <div class="nav-label">Tools</div>
         <button type="button" onclick="window.open('http://127.0.0.1:8025/', '_blank')">Mail inbox</button>
-        <button type="button" onclick="window.open('http://localhost/phpmyadmin/', '_blank')">Phpmyadmin</button>
+        <button type="button" onclick="window.open('http://localhost/phpmyadmin/', '_blank')">phpMyAdmin</button>
       </nav>
     </aside>
 
@@ -46,19 +47,18 @@ require __DIR__ . '/includes/bootstrap.php';
       </div>
 
       <section class="section active" id="view-overview">
-        <img class="app-logo" src="assets/patilweb-app-logo.jpg" alt="PatilWeb CPanel — PatilWeb Control Panel for Windows Apache Server">
         <div class="ov-health" id="ov-health">
           <div class="ov-health-main">
             <div class="ov-health-dot" id="ov-health-dot" aria-hidden="true"></div>
             <div>
               <div class="ov-health-title" id="ov-health-title">Checking stack…</div>
-              <div class="ov-health-sub" id="ov-health-sub">Apache · PHP · MySQL · Mail · FTP</div>
+              <div class="ov-health-chips" id="ov-health-chips"></div>
+              <div class="ov-health-sub" id="ov-health-sub"></div>
             </div>
           </div>
           <div class="btn-row ov-health-actions">
             <button class="btn primary" type="button" data-action="restart_all" title="Reload Apache, PHP listeners, Mail, and FTP">Restart stack</button>
             <button class="btn" type="button" id="ov-start-needed" hidden>Start stopped</button>
-            <button class="btn" type="button" id="refresh-status-ov">Refresh</button>
           </div>
         </div>
 
