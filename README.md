@@ -51,7 +51,13 @@ Portable Windows web stack (install folder can live anywhere) with a control pan
 | ![Mailpit](pic/mailpit.png) | ![phpMyAdmin](pic/phpmyadmin.png) | ![Tray menu](pic/tray_menu.png) |
 
 ---
-
+![Overview](pic/screencapture-localhost-panel-2026-10-12-20_44_19%20(1).png)
+![Sites](pic/screencapture-localhost-panel-2026-10-12-20_44_33.png)
+![PHP Config](pic/screencapture-localhost-panel-2026-10-12-20_44_44.png)
+![Config Editor](pic/screencapture-localhost-panel-2026-10-12-20_44_49.png)
+![Logs](pic/screencapture-localhost-panel-2026-10-12-20_44_58.png)
+![Database](pic/screencapture-localhost-panel-2026-10-12-20_45_09.png)
+![FTP](pic/screencapture-localhost-panel-2026-10-12-20_45_20.png)
 ## Prerequisites
 
 1. **Visual C++ Redistributable (x86)** — required by Apache Lounge Win32 and PHP x86 builds  
