@@ -112,6 +112,11 @@ Sub StartPhp(phpDir, port)
   If Not fso.FileExists(exe) Then Exit Sub
   If IsListening(port) Then Exit Sub
   WshShell.Run "cmd /c set PHPRC=" & phpDir & "&& set PHP_FCGI_CHILDREN=8&& set PHP_FCGI_MAX_REQUESTS=500&& """ & exe & """ -b 127.0.0.1:" & port & " -c """ & phpDir & """", 0, False
+  Dim i
+  For i = 1 To 10
+    WScript.Sleep 400
+    If IsListening(port) Then Exit Sub
+  Next
 End Sub
 
 Sub StartApacheWithRetry
