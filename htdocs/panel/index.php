@@ -574,6 +574,6 @@ require __DIR__ . '/includes/bootstrap.php';
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="assets/app.js?v=14"></script>
+  <script src="assets/app.js?v=19"></script>
 </body>
 </html>

@@ -143,6 +143,8 @@ async function allowFirewall(btn) {
     setBusy(btn, false);
   }
 }
+
+function renderStatus() {
   const s = state.status;
   if (!s) return;
 
