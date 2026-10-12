@@ -24,50 +24,86 @@ StartApacheWithRetry
 WScript.Quit 0
 
 Sub StartDefaultPhp
-  Dim phpExe, out, parts, dir, port
-  phpExe = FindAnyPhpExe()
-  If phpExe = "" Then Exit Sub
-  out = Trim(ExecCapture("""" & phpExe & """ """ & SCRIPTS & "\list-php-runtime.php"" default"))
-  If out = "" Then Exit Sub
-  parts = Split(out, vbTab)
-  If UBound(parts) < 1 Then Exit Sub
-  dir = Trim(parts(0))
-  port = CLng(Trim(parts(1)))
+  Dim raw, key, slice, dir, port
+  raw = ReadAllText(WEB & "\htdocs\panel\data\php-runtime.json")
+  key = "8.0"
+  If raw <> "" Then
+    Dim picked
+    picked = JsonString(raw, "default")
+    If picked <> "" Then key = picked
+  End If
+  dir = ""
+  port = 0
+  If raw <> "" Then
+    slice = VersionSlice(raw, key)
+    If slice <> "" Then
+      dir = Replace(JsonString(slice, "dir"), "\\", "\")
+      dir = Replace(dir, "/", "\")
+      port = JsonNumber(slice, "port")
+    End If
+  End If
+  If dir = "" Or Not fso.FileExists(dir & "\php-cgi.exe") Then
+    dir = FindPhpDirByKey(key)
+  End If
+  If port < 1 Then port = PreferredPhpPort(key)
+  If dir = "" Then Exit Sub
   StartPhp dir, port
 End Sub
 
-Function FindAnyPhpExe()
-  Dim fold, subf, exe, raw, p, endPos, block, dir
-  FindAnyPhpExe = ""
-  raw = ReadAllText(WEB & "\htdocs\panel\data\php-runtime.json")
-  If raw <> "" Then
-    p = InStr(1, raw, """dir""")
-    If p > 0 Then
-      endPos = InStr(p, raw, ",")
-      If endPos < 1 Then endPos = InStr(p, raw, "}")
-      If endPos > p Then
-        block = Mid(raw, p, endPos - p + 1)
-        dir = JsonString(block, "dir")
-        If dir <> "" Then
-          exe = dir & "\php.exe"
-          If fso.FileExists(exe) Then
-            FindAnyPhpExe = exe
-            Exit Function
-          End If
-        End If
-      End If
+Function VersionSlice(raw, key)
+  Dim token, p
+  VersionSlice = ""
+  token = """" & key & """:"
+  p = InStr(1, raw, token)
+  If p < 1 Then Exit Function
+  VersionSlice = Mid(raw, p, 900)
+End Function
+
+Function JsonNumber(raw, key)
+  Dim p, i, ch, num
+  JsonNumber = 0
+  p = InStr(1, LCase(raw), """" & LCase(key) & """")
+  If p < 1 Then Exit Function
+  p = InStr(p, raw, ":")
+  If p < 1 Then Exit Function
+  num = ""
+  For i = p + 1 To Len(raw)
+    ch = Mid(raw, i, 1)
+    If ch >= "0" And ch <= "9" Then
+      num = num & ch
+    ElseIf num <> "" Then
+      Exit For
     End If
-  End If
+  Next
+  If num <> "" Then JsonNumber = CLng(num)
+End Function
+
+Function FindPhpDirByKey(key)
+  Dim fold, subf, prefix
+  FindPhpDirByKey = ""
+  prefix = "php" & key
+  On Error Resume Next
   Set fold = fso.GetFolder(WEB)
+  If Err.Number <> 0 Then Exit Function
+  On Error GoTo 0
   For Each subf In fold.SubFolders
-    If LCase(Left(subf.Name, 3)) = "php" Then
-      exe = subf.Path & "\php.exe"
-      If fso.FileExists(exe) Then
-        FindAnyPhpExe = exe
+    If LCase(Left(subf.Name, Len(prefix))) = LCase(prefix) Then
+      If fso.FileExists(subf.Path & "\php-cgi.exe") Then
+        FindPhpDirByKey = subf.Path
         Exit Function
       End If
     End If
   Next
+End Function
+
+Function PreferredPhpPort(key)
+  Dim parts, maj, mino
+  PreferredPhpPort = 9080
+  parts = Split(key & ".0", ".")
+  If UBound(parts) < 1 Then Exit Function
+  maj = CLng(parts(0))
+  mino = CLng(parts(1))
+  PreferredPhpPort = 9000 + (maj * 10) + mino
 End Function
 
 Sub StartPhp(phpDir, port)
@@ -90,15 +126,6 @@ Sub StartApacheWithRetry
     If IsListening(80) Then Exit Sub
   Next
 End Sub
-
-Function ExecCapture(cmd)
-  Dim exec
-  Set exec = WshShell.Exec("cmd /c " & cmd)
-  Do While exec.Status = 0
-    WScript.Sleep 50
-  Loop
-  ExecCapture = exec.StdOut.ReadAll
-End Function
 
 Function JsonString(raw, key)
   Dim p, q1, q2

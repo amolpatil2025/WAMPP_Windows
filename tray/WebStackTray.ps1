@@ -8,10 +8,13 @@ $ErrorActionPreference = 'SilentlyContinue'
 $WebRoot = Split-Path -Parent $PSScriptRoot
 $PanelUrl = 'http://localhost/panel/'
 $MutexName = 'Local\WebStackTrayMutex'
+$trayCheckOnly = $args -contains '-TrayCheckOnly'
 
 $mutex = New-Object System.Threading.Mutex($false, $MutexName)
 if (-not $mutex.WaitOne(0, $false)) {
-  [System.Windows.Forms.MessageBox]::Show('Web Stack Tray is already running.', 'Web Stack') | Out-Null
+  if (-not $trayCheckOnly) {
+    [System.Windows.Forms.MessageBox]::Show('PatilWeb CPanel tray is already running.', 'PatilWeb CPanel') | Out-Null
+  }
   exit 0
 }
 
