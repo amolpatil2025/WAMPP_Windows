@@ -140,6 +140,21 @@ a:hover { text-decoration: underline; }
   font-size: 0.9rem;
 }
 
+.fw-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(230, 179, 90, 0.5);
+  background: rgba(230, 179, 90, 0.12);
+}
+.fw-notice strong { display: block; margin-bottom: 4px; }
+.fw-notice p { margin: 0; color: var(--text); font-size: 0.86rem; max-width: 62ch; }
+
 .toast {
   position: fixed;
   right: 22px;

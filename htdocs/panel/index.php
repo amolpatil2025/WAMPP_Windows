@@ -11,7 +11,7 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=17">
+  <link rel="stylesheet" href="assets/app.css?v=18">
 </head>
 <body>
   <div class="app">
@@ -44,6 +44,14 @@ require __DIR__ . '/includes/bootstrap.php';
           <p id="page-sub">Live status, restarts, and quick links</p>
         </div>
         <button class="btn" type="button" id="refresh-status">Refresh</button>
+      </div>
+
+      <div id="fw-notice" class="fw-notice hidden" role="status">
+        <div>
+          <strong>Windows Firewall permission needed</strong>
+          <p id="fw-notice-text">Apache or PHP CLI is not allowed through Windows Firewall.</p>
+        </div>
+        <button class="btn primary" type="button" id="fw-allow">Allow</button>
       </div>
 
       <section class="section active" id="view-overview">

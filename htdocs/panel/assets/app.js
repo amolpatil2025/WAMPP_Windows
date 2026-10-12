@@ -109,7 +109,40 @@ function overviewHealth(s) {
   return { tone, title, sub, requiredDown, phpUp, phpTotal, checks };
 }
 
-function renderStatus() {
+function renderFirewall(d) {
+  const box = $('#fw-notice');
+  if (!box) return;
+  const missing = (d && d.missing) || [];
+  box.classList.toggle('hidden', !d || d.checked === false || missing.length === 0);
+  const text = $('#fw-notice-text');
+  if (text && missing.length) {
+    const names = missing.map(m => m.label).join(', ');
+    text.textContent = names + ' ' + (missing.length === 1 ? 'is' : 'are') + ' not allowed through Windows Firewall. Choose Allow and accept the Windows prompt so they can run.';
+  }
+}
+
+async function loadFirewall() {
+  try {
+    const data = await api('firewall_status');
+    renderFirewall(data.data);
+  } catch (e) {
+    renderFirewall(null);
+  }
+}
+
+async function allowFirewall(btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api('firewall_allow', { body: {} });
+    renderFirewall(data.data);
+    toast(data.message || 'Allowed');
+  } catch (e) {
+    toast(e.message, true);
+    await loadFirewall();
+  } finally {
+    setBusy(btn, false);
+  }
+}
   const s = state.status;
   if (!s) return;
 
@@ -1771,6 +1804,7 @@ function bind() {
     try {
       setBusy(e.currentTarget, true);
       await refreshStatus();
+      await loadFirewall();
       toast('Status refreshed');
     } catch (err) {
       toast(err.message, true);
@@ -1780,6 +1814,7 @@ function bind() {
   };
   $('#refresh-status')?.addEventListener('click', onRefresh);
   $('#refresh-status-ov')?.addEventListener('click', onRefresh);
+  $('#fw-allow')?.addEventListener('click', () => allowFirewall($('#fw-allow')));
 
   // PHP Config
   $$('[data-php-mode]').forEach(b => b.addEventListener('click', () => setPhpMode(b.dataset.phpMode)));
@@ -1856,6 +1891,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   showView('overview');
   try {
     await refreshStatus();
+    await loadFirewall();
     if (state.status?.default_php) {
       state.phpini.version = state.status.default_php;
       if ($('#phpini-version')) $('#phpini-version').value = state.status.default_php;

@@ -11,6 +11,20 @@ try {
         case 'status':
             json_out(['ok' => true, 'data' => service_status()]);
 
+        case 'firewall_status':
+            json_out(['ok' => true, 'data' => firewall_status()]);
+
+        case 'firewall_allow':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $r = firewall_allow();
+            json_out([
+                'ok' => $r['ok'],
+                'message' => $r['message'],
+                'data' => $r['status'] ?? firewall_status(),
+            ], $r['ok'] ? 200 : 400);
+
         case 'start_php':
             $results = [];
             foreach (array_keys(PHP_VERSIONS) as $ver) {
