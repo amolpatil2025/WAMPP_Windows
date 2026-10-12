@@ -5,20 +5,21 @@ Download wamp server to build a reliable local web development environment on Wi
 # Quick Start: Install & Run Web Stack on Windows
 
 1. **[Download the package](https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.5/v1.5.zip)** OR **[Download Setup File](https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.5/ApachePHPWindows.exe)**
-   Click the link to download `v1.2.zip` (latest release).
 
-2. **Extract the ZIP file**  
+   Click the link to download `v1.5.zip` or `ApachePHPWindows.exe`(latest release).
+
+3. **Extract the ZIP file**  
    Right-click the downloaded file and select "Extract All...". Choose your desired folder (e.g., `C:\web` or any location).
 
-3. **Run the stack**  
+4. **Run the stack**  
    - Open the extracted folder.
    - Double-click `start.bat` to launch the stack (Apache, PHP, MySQL, Mailpit, FTP).
    - The control panel will be available at [http://localhost/panel/](http://localhost/panel/).
 
-4. **(Optional) Allow firewall access**  
+5. **(Optional) Allow firewall access**  
    - The first time you run `start.bat`, Windows Firewall may prompt you. Click "Allow access" for Apache/MySQL.
 
-5. **You're ready!**  
+6. **You're ready!**  
    - Add site files to the `htdocs` folder.
    - Manage settings and databases via the control panel.
 
