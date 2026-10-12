@@ -1,17 +1,17 @@
 {
     "default": "8.0",
-    "updated": "2026-10-11T12:22:52+05:30",
+    "updated": "2026-10-12T18:41:51+05:30",
     "versions": {
         "8.0": {
             "label": "PHP 8.0.30",
             "version": "8.0.30",
-            "dir": "C:\\Users\\amolp\\Documents\\web_xampp\\php8.0.30",
+            "dir": "C:\\Users\\amolp\\Documents\\WAMPP_Windows\\php8.0.30",
             "folder": "php8.0.30",
             "port": 9080,
             "hosts": [
-                "php8",
-                "localhost8",
-                "localhost.php8"
+                "php80",
+                "localhost80",
+                "localhost.php80"
             ]
         }
     }
