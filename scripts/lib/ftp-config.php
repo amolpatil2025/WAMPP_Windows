@@ -36,7 +36,7 @@ function ftp_default_config(string $webRoot): array
     return [
         '_comment' => 'Web Stack FTP. Manage accounts at http://localhost/panel/ (FTP).',
         'port' => 2121,
-        'bind' => '127.0.0.1',
+        'bind' => '0.0.0.0',
         'pasv_min' => 2122,
         'pasv_max' => 2200,
         'users' => [
@@ -90,9 +90,9 @@ function ftp_normalize_config(string $webRoot, array $data): array
     if ($port < 1 || $port > 65535) {
         $port = 2121;
     }
-    $bind = (string)($data['bind'] ?? '127.0.0.1');
+    $bind = (string)($data['bind'] ?? '0.0.0.0');
     if ($bind !== '127.0.0.1' && $bind !== '0.0.0.0') {
-        $bind = '127.0.0.1';
+        $bind = '0.0.0.0';
     }
     $pasvMin = (int)($data['pasv_min'] ?? 2122);
     $pasvMax = (int)($data['pasv_max'] ?? 2200);

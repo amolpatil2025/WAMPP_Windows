@@ -1250,6 +1250,36 @@ table.data tr:hover td { background: rgba(61, 207, 154, 0.05); }
   font-size: 0.82rem;
   word-break: break-all;
 }
+.ftp-access {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ftp-access-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev);
+}
+.ftp-access-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  min-width: 58px;
+}
+.ftp-access-url {
+  flex: 1 1 180px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  word-break: break-all;
+  background: transparent;
+  padding: 0;
+}
+.ftp-access .meta { margin: 2px 0 0; }
 .ftp-log {
   max-height: 240px;
   overflow: auto;

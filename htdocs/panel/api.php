@@ -249,6 +249,14 @@ try {
         case 'ftp_get':
             json_out(['ok' => true, 'data' => ftp_panel_state()]);
 
+        case 'ftp_open':
+            if ($method !== 'POST') {
+                json_out(['ok' => false, 'message' => 'POST required'], 405);
+            }
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $r = ftp_open_client((string)($body['host'] ?? ''), (string)($body['client'] ?? ''));
+            json_out(['ok' => $r['ok'], 'message' => $r['message']], $r['ok'] ? 200 : 400);
+
         case 'ftp_save_settings':
             if ($method !== 'POST') {
                 json_out(['ok' => false, 'message' => 'POST required'], 405);

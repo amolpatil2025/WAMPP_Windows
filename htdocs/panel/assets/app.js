@@ -211,14 +211,18 @@ function renderStatus() {
       up: !!ftp.up,
       detail: ftp.installed === false
         ? 'php.exe not found'
-        : `Plain FTP :${ftp.port || 2121}`,
+        : ftp.bind === '0.0.0.0'
+          ? `All interfaces :${ftp.port || 2121}`
+          : `This PC only :${ftp.port || 2121}`,
       actions: ftp.installed === false
         ? []
         : ftp.up
           ? [{ action: 'stop_ftp', label: 'Stop', className: 'danger' }]
           : [{ action: 'start_ftp', label: 'Start', className: 'primary' }],
       links: [{ goto: 'ftp', label: 'Accounts' }],
-      note: ftp.port_busy ? `Port ${ftp.port} is in use by another program.` : '',
+      note: ftp.port_busy
+        ? `Port ${ftp.port} is in use by another program.`
+        : (ftp.bind === '0.0.0.0' && ftp.lan_ip ? `LAN ftp://${ftp.lan_ip}:${ftp.port || 2121}/` : ''),
     },
   ];
 
@@ -1451,15 +1455,90 @@ function syncFtpBindNote() {
   const note = $('#ftp-bind-note');
   if (!note || !$('#ftp-bind')) return;
   note.textContent = $('#ftp-bind').value === '0.0.0.0'
-    ? 'Other computers on your network can connect. Allow php.exe if Windows Firewall asks.'
-    : 'Clients on this PC connect to 127.0.0.1. Port 2121 starts as a normal user. Port 21 needs Administrator.';
+    ? 'Other computers on your network use ftp://<LAN IP>:2121/. Allow php.exe if Windows Firewall asks. Port 2121 starts as a normal user. Port 21 needs Administrator.'
+    : 'Only this PC can connect, at ftp://127.0.0.1:2121/. Port 2121 starts as a normal user. Port 21 needs Administrator.';
+}
+
+function ftpAccessHtml(d) {
+  const port = d.port || 2121;
+  const global = d.bind === '0.0.0.0';
+  const lans = Array.isArray(d.lan_ips) && d.lan_ips.length ? d.lan_ips : (d.lan_ip ? [d.lan_ip] : []);
+  const rows = [{ label: 'This PC', host: '127.0.0.1', url: `ftp://127.0.0.1:${port}/` }];
+  if (global) {
+    if (!lans.length) {
+      rows.push({ label: 'LAN', host: '', url: `ftp://<LAN IP>:${port}/` });
+    } else {
+      lans.forEach((ip, i) => {
+        rows.push({
+          label: lans.length > 1 ? `LAN ${i + 1}` : 'LAN',
+          host: ip,
+          url: `ftp://${ip}:${port}/`,
+        });
+      });
+    }
+  }
+  const clients = d.clients || {};
+  const buttons = (row) => {
+    if (!row.host) return '';
+    const bits = [
+      `<button class="btn" type="button" data-ftp-copy="${escapeAttr(row.url)}">Copy</button>`,
+      `<button class="btn" type="button" data-ftp-open="explorer" data-ftp-host="${escapeAttr(row.host)}">Explorer</button>`,
+    ];
+    if (clients.filezilla) {
+      bits.push(`<button class="btn" type="button" data-ftp-open="filezilla" data-ftp-host="${escapeAttr(row.host)}">FileZilla</button>`);
+    }
+    if (clients.winscp) {
+      bits.push(`<button class="btn" type="button" data-ftp-open="winscp" data-ftp-host="${escapeAttr(row.host)}">WinSCP</button>`);
+    }
+    return `<div class="btn-row">${bits.join('')}</div>`;
+  };
+  const hint = global
+    ? 'From another computer on this network, open the LAN address in Explorer, FileZilla, or WinSCP. Use the account below. Set encryption to plain FTP only, and allow php.exe if Windows Firewall asks.'
+    : `LAN is off. Set Listen to All interfaces, then other computers can use ftp://<LAN IP>:${port}/.`;
+  return `<div class="ftp-access">
+    ${rows.map(row => `<div class="ftp-access-row">
+      <span class="ftp-access-label">${escapeHtml(row.label)}</span>
+      <code class="ftp-access-url">${escapeHtml(row.url)}</code>
+      ${buttons(row)}
+    </div>`).join('')}
+    <p class="meta">${escapeHtml(hint)}</p>
+  </div>`;
+}
+
+async function copyFtpUrl(url) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    toast('Copied ' + url);
+  } catch (e) {
+    toast(e.message || 'Could not copy', true);
+  }
+}
+
+async function openFtpClient(client, host, btn) {
+  try {
+    setBusy(btn, true);
+    const data = await api('ftp_open', { body: { client, host } });
+    toast(data.message || 'Opened');
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    setBusy(btn, false);
+  }
 }
 
 function renderFtp(d) {
   if (!d) return;
   state.ftpRoot = d.stack_root || '';
   state.ftpUsers = d.users || [];
-  const host = d.host || '127.0.0.1';
   const account = state.ftpUsers.find(u => u.enabled) || null;
   const status = $('#ftp-status');
   if (status) {
@@ -1467,7 +1546,9 @@ function renderFtp(d) {
       <div class="row-between">
         <div>
           <div class="ov-service-name">FTP ${pill(!!d.up)}</div>
-          <p class="muted">Plain FTP. In FileZilla, set Encryption to “Only use plain FTP (insecure)”.</p>
+          <p class="muted">${escapeHtml(d.bind === '0.0.0.0'
+            ? `Plain FTP. Other computers use ftp://<LAN IP>:${d.port || 2121}/`
+            : 'Plain FTP. Listening on this computer only.')}</p>
         </div>
         <div class="btn-row">
           ${d.installed === false ? '' : d.up
@@ -1476,14 +1557,12 @@ function renderFtp(d) {
             : `<button class="btn primary" type="button" data-ftp-action="start">Start</button>`}
         </div>
       </div>
+      ${ftpAccessHtml(d)}
       <dl class="ftp-facts">
-        <dt>Host</dt><dd>${escapeHtml(host)}</dd>
-        ${d.bind === '0.0.0.0' && d.lan_ip ? `<dt>LAN</dt><dd>${escapeHtml(d.lan_ip)}</dd>` : ''}
         <dt>Port</dt><dd>${escapeHtml(d.port)}</dd>
         <dt>Passive</dt><dd>${escapeHtml(d.pasv_min)}–${escapeHtml(d.pasv_max)}</dd>
         <dt>Account</dt><dd>${account ? escapeHtml(account.name) : 'Add an account'}</dd>
         <dt>Password</dt><dd>${account && account.initial_password ? escapeHtml(account.initial_password) : 'Set on the account'}</dd>
-        <dt>URL</dt><dd>ftp://${escapeHtml(d.bind === '0.0.0.0' && d.lan_ip ? d.lan_ip : host)}:${escapeHtml(d.port)}/</dd>
       </dl>
       ${d.port_busy ? `<p class="ov-service-note">Port ${escapeHtml(d.port)} is in use by another program.</p>` : ''}
       ${d.config_ok === false ? '<p class="ov-service-note">ftp/ftp.json could not be read.</p>' : ''}
@@ -1493,7 +1572,7 @@ function renderFtp(d) {
 
   const typingSettings = document.activeElement && document.activeElement.closest && document.activeElement.closest('#ftp-settings-form');
   if (!typingSettings && $('#ftp-bind')) {
-    $('#ftp-bind').value = d.bind || '127.0.0.1';
+    $('#ftp-bind').value = d.bind || '0.0.0.0';
     $('#ftp-port').value = d.port || 2121;
     syncFtpBindNote();
   }
@@ -1710,6 +1789,16 @@ function bind() {
     if (actionBtn) {
       const map = { start: 'start_ftp', stop: 'stop_ftp', restart: 'restart_ftp' };
       runFtpAction(map[actionBtn.dataset.ftpAction], actionBtn);
+      return;
+    }
+    const copy = e.target.closest('[data-ftp-copy]');
+    if (copy) {
+      copyFtpUrl(copy.dataset.ftpCopy);
+      return;
+    }
+    const open = e.target.closest('[data-ftp-open]');
+    if (open) {
+      openFtpClient(open.dataset.ftpOpen, open.dataset.ftpHost, open);
       return;
     }
     const edit = e.target.closest('[data-ftp-edit]');

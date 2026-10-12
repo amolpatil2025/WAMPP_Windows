@@ -457,14 +457,14 @@ require __DIR__ . '/includes/bootstrap.php';
               <form id="ftp-settings-form" class="site-form" autocomplete="off">
                 <label>Listen
                   <select id="ftp-bind">
+                    <option value="0.0.0.0" selected>All interfaces (this PC and the LAN)</option>
                     <option value="127.0.0.1">This computer only (127.0.0.1)</option>
-                    <option value="0.0.0.0">All interfaces</option>
                   </select>
                 </label>
                 <label>Port
                   <input type="number" id="ftp-port" min="1" max="65535" value="2121" required>
                 </label>
-                <p class="meta" id="ftp-bind-note">Clients on this PC connect to 127.0.0.1. Port 2121 starts as a normal user. Port 21 needs Administrator.</p>
+                <p class="meta" id="ftp-bind-note">Other computers on your network use ftp://&lt;LAN IP&gt;:2121/. Allow php.exe if Windows Firewall asks. Port 2121 starts as a normal user. Port 21 needs Administrator.</p>
                 <button class="btn primary" type="submit" id="ftp-save-settings">Save listener</button>
               </form>
             </div>

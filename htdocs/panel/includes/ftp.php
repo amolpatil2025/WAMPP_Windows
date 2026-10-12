@@ -53,7 +53,8 @@ function ftp_status_brief(): array
         'port_busy' => $listening && !$ours,
         'config_ok' => is_array($cfg),
         'port' => $port,
-        'bind' => is_array($cfg) ? (string)$cfg['bind'] : '127.0.0.1',
+        'bind' => is_array($cfg) ? (string)$cfg['bind'] : '0.0.0.0',
+        'lan_ip' => ftp_lan_ip(),
         'label' => 'FTP',
     ];
 }
@@ -115,16 +116,206 @@ function restart_ftp(): array
     return start_ftp();
 }
 
+function ftp_is_lan_ipv4(string $ip): bool
+{
+    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return false;
+    }
+    if ($ip === '0.0.0.0' || strpos($ip, '127.') === 0 || strpos($ip, '169.254.') === 0) {
+        return false;
+    }
+    return true;
+}
+
+function ftp_lan_rank(string $ip): int
+{
+    if (preg_match('/^192\.168\.(56|122)\./', $ip)) {
+        return 40;
+    }
+    if (preg_match('/^192\.168\./', $ip)) {
+        return 10;
+    }
+    if (preg_match('/^10\./', $ip)) {
+        return 20;
+    }
+    if (preg_match('/^172\.(1[6-9]|2\d|3[0-1])\./', $ip)) {
+        return 30;
+    }
+    return 50;
+}
+
+function ftp_virtual_adapter(string $name): bool
+{
+    return (bool)preg_match('/vEthernet|VMware|VirtualBox|Hyper-V|WSL|Bluetooth|OpenVPN|TAP-Windows|WireGuard|ZeroTier|Tailscale|Docker|Npcap|VPN|NordLynx|Wintun|Loopback/i', $name);
+}
+
+/**
+ * IPv4 addresses other computers on this network can use.
+ * Real adapters with a gateway come first. VMware, Hyper-V, and VPN adapters are skipped.
+ */
+function ftp_lan_ips(): array
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    $out = [];
+    @exec('ipconfig', $out);
+    $adapters = [];
+    $current = -1;
+    foreach ($out as $line) {
+        $trim = rtrim($line);
+        if ($trim !== '' && preg_match('/^[^\s].*:$/', $trim)) {
+            $adapters[] = ['name' => $trim, 'ips' => [], 'gateway' => false];
+            $current = count($adapters) - 1;
+            continue;
+        }
+        if ($current < 0) {
+            continue;
+        }
+        if (preg_match('/IPv4[^:]*:\s*(\d{1,3}(?:\.\d{1,3}){3})/i', $line, $m)) {
+            $adapters[$current]['ips'][] = $m[1];
+        } elseif (preg_match('/(?:Gateway|Passerelle)[^:]*:\s*(\S+)/i', $line, $m) && $m[1] !== '') {
+            $adapters[$current]['gateway'] = true;
+        }
+    }
+    $ranked = [];
+    foreach ($adapters as $adapter) {
+        if (ftp_virtual_adapter($adapter['name'])) {
+            continue;
+        }
+        foreach ($adapter['ips'] as $ip) {
+            if (!ftp_is_lan_ipv4($ip)) {
+                continue;
+            }
+            $score = ftp_lan_rank($ip) + ($adapter['gateway'] ? 0 : 25);
+            if (preg_match('/\.1$/', $ip)) {
+                $score += 15;
+            }
+            if (!isset($ranked[$ip]) || $score < $ranked[$ip]) {
+                $ranked[$ip] = $score;
+            }
+        }
+    }
+    if (!$ranked) {
+        $name = gethostname();
+        $fallback = [];
+        if (is_string($name) && $name !== '') {
+            $list = @gethostbynamel($name);
+            if (is_array($list)) {
+                $fallback = $list;
+            }
+            $one = gethostbyname($name);
+            if (is_string($one)) {
+                $fallback[] = $one;
+            }
+        }
+        foreach ($fallback as $ip) {
+            $ip = (string)$ip;
+            if (ftp_is_lan_ipv4($ip)) {
+                $ranked[$ip] = ftp_lan_rank($ip);
+            }
+        }
+    }
+    asort($ranked);
+    $cached = array_keys($ranked);
+    return $cached;
+}
+
 function ftp_lan_ip(): string
 {
-    $ip = gethostbyname(gethostname());
-    if (!is_string($ip) || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+    $ips = ftp_lan_ips();
+    return $ips[0] ?? '';
+}
+
+function ftp_client_exes(): array
+{
+    $pf = str_replace('\\', '/', (string)(getenv('ProgramFiles') ?: 'C:/Program Files'));
+    $pf86 = str_replace('\\', '/', (string)(getenv('ProgramFiles(x86)') ?: 'C:/Program Files (x86)'));
+    $local = str_replace('\\', '/', (string)(getenv('LOCALAPPDATA') ?: ''));
+    $pick = static function (array $paths): string {
+        foreach ($paths as $path) {
+            if ($path !== '' && is_file($path)) {
+                return str_replace('/', '\\', $path);
+            }
+        }
         return '';
+    };
+    return [
+        'filezilla' => $pick([
+            $pf . '/FileZilla FTP Client/filezilla.exe',
+            $pf86 . '/FileZilla FTP Client/filezilla.exe',
+            $local !== '' ? $local . '/FileZilla FTP Client/filezilla.exe' : '',
+        ]),
+        'winscp' => $pick([
+            $pf . '/WinSCP/WinSCP.exe',
+            $pf86 . '/WinSCP/WinSCP.exe',
+            $local !== '' ? $local . '/Programs/WinSCP/WinSCP.exe' : '',
+        ]),
+    ];
+}
+
+function ftp_enabled_account(?array $cfg): ?array
+{
+    if (!is_array($cfg)) {
+        return null;
     }
-    if ($ip === '127.0.0.1') {
-        return '';
+    foreach ($cfg['users'] as $user) {
+        if (!empty($user['enabled'])) {
+            return $user;
+        }
     }
-    return $ip;
+    return null;
+}
+
+function ftp_client_url(string $host, int $port, ?array $user): string
+{
+    $auth = '';
+    if (is_array($user)) {
+        $name = rawurlencode((string)$user['name']);
+        $pass = isset($user['initial_password']) ? (string)$user['initial_password'] : '';
+        $auth = $pass !== '' ? $name . ':' . rawurlencode($pass) . '@' : $name . '@';
+    }
+    return 'ftp://' . $auth . $host . ':' . $port . '/';
+}
+
+function ftp_start_visible(string $command): void
+{
+    pclose(popen('cmd /c start "" ' . $command, 'r'));
+}
+
+function ftp_open_client(string $host, string $client): array
+{
+    $cfg = ftp_ensure_config(WEB_ROOT);
+    if ($cfg === null) {
+        return ['ok' => false, 'message' => 'ftp/ftp.json is invalid'];
+    }
+    $host = trim($host);
+    $allowed = ['127.0.0.1', 'localhost'];
+    if (($cfg['bind'] ?? '') === '0.0.0.0') {
+        $allowed = array_merge($allowed, ftp_lan_ips());
+    }
+    if (!in_array($host, $allowed, true)) {
+        return ['ok' => false, 'message' => 'That address is not this computer'];
+    }
+    $port = (int)$cfg['port'];
+    $url = ftp_client_url($host, $port, ftp_enabled_account($cfg));
+    $shown = 'ftp://' . $host . ':' . $port . '/';
+    if ($client === 'explorer') {
+        ftp_start_visible('explorer.exe ' . escapeshellarg($url));
+        return ['ok' => true, 'message' => 'Opened ' . $shown . ' in Windows Explorer'];
+    }
+    $exes = ftp_client_exes();
+    if ($client !== 'filezilla' && $client !== 'winscp') {
+        return ['ok' => false, 'message' => 'Unknown FTP program'];
+    }
+    $exe = $exes[$client];
+    $label = $client === 'filezilla' ? 'FileZilla' : 'WinSCP';
+    if ($exe === '') {
+        return ['ok' => false, 'message' => $label . ' is not installed. Use Explorer, or paste ' . $shown . ' into your FTP program.'];
+    }
+    ftp_start_visible(escapeshellarg($exe) . ' ' . escapeshellarg($url));
+    return ['ok' => true, 'message' => 'Opened ' . $shown . ' in ' . $label];
 }
 
 function ftp_panel_state(): array
@@ -152,12 +343,16 @@ function ftp_panel_state(): array
         'port_busy' => $brief['port_busy'],
         'config_ok' => is_array($cfg),
         'port' => is_array($cfg) ? (int)$cfg['port'] : 2121,
-        'bind' => is_array($cfg) ? (string)$cfg['bind'] : '127.0.0.1',
+        'bind' => is_array($cfg) ? (string)$cfg['bind'] : '0.0.0.0',
         'pasv_min' => is_array($cfg) ? (int)$cfg['pasv_min'] : 2122,
         'pasv_max' => is_array($cfg) ? (int)$cfg['pasv_max'] : 2200,
         'users' => $users,
         'host' => '127.0.0.1',
         'lan_ip' => ftp_lan_ip(),
+        'lan_ips' => ftp_lan_ips(),
+        'clients' => array_map(static function (string $path): bool {
+            return $path !== '';
+        }, ftp_client_exes()),
         'stack_root' => WEB_ROOT,
         'log' => read_tail(ftp_log_file(WEB_ROOT), 40),
         'log_path' => ftp_log_file(WEB_ROOT),

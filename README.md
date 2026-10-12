@@ -218,7 +218,9 @@ A small FTP server runs with the stack so FileZilla, WinSCP, or an editor can up
 
 | | |
 |--|--|
-| Host | `127.0.0.1` |
+| Listen | All interfaces (`0.0.0.0`) — this PC and the LAN |
+| This PC | `ftp://127.0.0.1:2121/` |
+| LAN | `ftp://<LAN IP>:2121/` (the panel shows the address) |
 | Port | `2121` (change it in the panel; `21` needs Administrator) |
 | Default account | `web` / `web` until you set a new password |
 | Home | `<install>\htdocs` |
@@ -226,7 +228,7 @@ A small FTP server runs with the stack so FileZilla, WinSCP, or an editor can up
 | Log | `<install>\ftp\logs\ftp.log` |
 | Panel | http://localhost/panel/ → **FTP** |
 
-In FileZilla set **Encryption** to **Only use plain FTP (insecure)**.
+On the FTP page, **Explorer** opens that address in Windows Explorer. **FileZilla** and **WinSCP** appear when those programs are installed. In FileZilla set **Encryption** to **Only use plain FTP (insecure)**. Allow `php.exe` if Windows Firewall asks, including passive ports `2122`–`2200`.
 
 The first time the panel or `start.bat` runs, it creates the `web` account. Add more accounts on the FTP page (for example home `htdocs/myapp`, read-only or upload). Saving a listener change restarts FTP when it is already running. Account changes apply on the next login.
 
@@ -288,7 +290,7 @@ Saving `php.ini` creates a `.bak-*` backup. Use **Restart PHP** in PHP Config so
 - [ ] `C:\web\php7.4.33\php-cgi.exe` (and 8.0 / 8.4) present — **TS · x86**  
 - [ ] Each PHP folder has a working `php.ini` (`SMTP` → `127.0.0.1:1025`)  
 - [ ] `C:\web\mailpit\mailpit.exe` present  
-- [ ] FTP: panel → **FTP** shows `127.0.0.1:2121`, account `web`  
+- [ ] FTP: panel → **FTP** shows `ftp://127.0.0.1:2121/` and `ftp://<LAN IP>:2121/`, account `web`  
 - [ ] `start.bat` → http://localhost/panel/ and http://127.0.0.1:8025/ load  
 
 ---
