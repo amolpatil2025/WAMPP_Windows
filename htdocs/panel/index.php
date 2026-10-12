@@ -6,18 +6,22 @@ require __DIR__ . '/includes/bootstrap.php';
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Web Stack Panel</title>
+  <title>PatilWeb CPanel</title>
+  <link rel="icon" href="assets/patilweb-logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=14">
+  <link rel="stylesheet" href="assets/app.css?v=16">
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <strong>Stack Panel</strong>
-        <span>Apache · PHP · MySQL · Mail · FTP</span>
+        <img class="brand-mark" src="assets/patilweb-logo.jpg" alt="">
+        <div class="brand-copy">
+          <strong>PatilWeb CPanel</strong>
+          <span>PatilWeb Control Panel for Windows Apache Server</span>
+        </div>
       </div>
       <nav class="nav">
         <button type="button" data-view="overview" class="active">Overview</button>
@@ -35,13 +39,14 @@ require __DIR__ . '/includes/bootstrap.php';
     <main class="main">
       <div class="topbar">
         <div>
-          <h1 id="page-title">Stack overview</h1>
+          <h1 id="page-title">Overview</h1>
           <p id="page-sub">Live status, restarts, and quick links</p>
         </div>
         <button class="btn" type="button" id="refresh-status">Refresh</button>
       </div>
 
       <section class="section active" id="view-overview">
+        <img class="app-logo" src="assets/patilweb-app-logo.jpg" alt="PatilWeb CPanel — PatilWeb Control Panel for Windows Apache Server">
         <div class="ov-health" id="ov-health">
           <div class="ov-health-main">
             <div class="ov-health-dot" id="ov-health-dot" aria-hidden="true"></div>

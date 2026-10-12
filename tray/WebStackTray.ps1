@@ -75,6 +75,13 @@ function Start-StackSilent {
   }
 }
 
+function Stop-AllServices {
+  $bat = Join-Path $WebRoot 'stop.bat'
+  if (Test-Path -LiteralPath $bat) {
+    Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', "`"$bat`"") -WindowStyle Hidden -Wait
+  }
+}
+
 function Get-BrowserAppExe {
   $candidates = @(
     "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
@@ -229,6 +236,18 @@ function Get-StatusText {
 }
 
 function New-TrayIcon {
+  $logo = Join-Path $WebRoot 'htdocs\panel\assets\patilweb-logo.jpg'
+  if (Test-Path $logo) {
+    $src = [System.Drawing.Image]::FromFile($logo)
+    $bmp = New-Object System.Drawing.Bitmap 32, 32
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.Clear([System.Drawing.Color]::White)
+    $g.DrawImage($src, 1, 1, 30, 30)
+    $g.Dispose()
+    $src.Dispose()
+    return [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
+  }
   $bmp = New-Object System.Drawing.Bitmap 32, 32
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
@@ -237,14 +256,14 @@ function New-TrayIcon {
   $g.FillEllipse($brush, 2, 2, 28, 28)
   $font = New-Object System.Drawing.Font 'Segoe UI', 11, ([System.Drawing.FontStyle]::Bold)
   $tbrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)
-  $g.DrawString('W', $font, $tbrush, 7, 6)
+  $g.DrawString('P', $font, $tbrush, 8, 6)
   $g.Dispose()
   $icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
   return $icon
 }
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'Web Stack Tray'
+$form.Text = 'PatilWeb CPanel'
 $form.ShowInTaskbar = $false
 $form.WindowState = 'Minimized'
 $form.Visible = $false
@@ -252,7 +271,7 @@ $form.Opacity = 0
 
 $notify = New-Object System.Windows.Forms.NotifyIcon
 $notify.Icon = New-TrayIcon
-$notify.Text = 'Web Stack'
+$notify.Text = 'PatilWeb CPanel'
 $notify.Visible = $true
 
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
@@ -270,12 +289,13 @@ function Add-Separator {
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 }
 
-Add-MenuItem 'Open Stack Panel' { Open-StackPanel } | Out-Null
+Add-MenuItem 'Open PatilWeb CPanel' { Open-StackPanel } | Out-Null
 Add-MenuItem 'Open localhost' { Open-AppWindow -Url 'http://localhost/' -ProfileName 'WebStackLocalApp' } | Out-Null
 Add-MenuItem 'Open Mail inbox' { Open-AppWindow -Url 'http://127.0.0.1:8025/' -ProfileName 'WebStackMailApp' } | Out-Null
 Add-MenuItem 'Open panel in browser' { Start-Process $PanelUrl } | Out-Null
 Add-Separator
 Add-MenuItem 'Start All (Apache + default PHP + Mail + FTP)' { Start-StackSilent; Start-Sleep -Seconds 1; Update-Tray } | Out-Null
+Add-MenuItem 'Stop All (Apache + PHP + Mail + FTP)' { Stop-AllServices; Update-Tray } | Out-Null
 Add-MenuItem 'Stop PHP (keep default)' { Stop-PhpOthers; Update-Tray } | Out-Null
 Add-MenuItem 'Stop Apache' { Stop-Apache; Update-Tray } | Out-Null
 Add-MenuItem 'Restart Apache' {
@@ -341,7 +361,7 @@ if (-not (Test-Port 80)) {
 }
 Update-Tray
 
-$notify.ShowBalloonTip(2500, 'Web Stack', 'Tray is running. Right-click the icon for Start/Stop.', [System.Windows.Forms.ToolTipIcon]::Info)
+$notify.ShowBalloonTip(2500, 'PatilWeb CPanel', 'Tray is running. Right-click the icon for Start/Stop.', [System.Windows.Forms.ToolTipIcon]::Info)
 
 [System.Windows.Forms.Application]::Run()
 $mutex.ReleaseMutex() | Out-Null

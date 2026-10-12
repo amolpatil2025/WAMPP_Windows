@@ -28,7 +28,7 @@ Download wamp server to build a reliable local web development environment on Wi
 
 Portable Windows web stack (install folder can live anywhere) with a control panel for sites, PHP config, logs, and database tools. Start with root `start.bat`.
 
-![Stack Panel overview](pic/panel-overview.png)
+![PatilWeb CPanel overview](pic/panel-overview.png)
 
 | Component | Location | Notes |
 |-----------|----------|--------|
@@ -248,6 +248,7 @@ FTP also starts with root `start.bat` / the system tray.
 | Action | Command |
 |--------|---------|
 | Start Apache + PHP + Mail + FTP | `start.bat` (root) |
+| Stop Apache + PHP + Mail + FTP | `stop.bat` (root) |
 | Same, from scripts | `scripts\start-stack.bat` |
 | System tray | `scripts\start-tray.bat` |
 | PHP only | `scripts\start-php.bat` |

@@ -51,18 +51,42 @@ a:hover { text-decoration: underline; }
 
 .brand {
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 0 4px;
+}
+.brand-mark {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 10px;
+  flex: none;
+}
+.brand-copy {
+  min-width: 0;
+  display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 28px;
-  padding: 0 8px;
+  gap: 3px;
 }
 .brand strong {
-  font-size: 1.35rem;
-  letter-spacing: -0.03em;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 .brand span {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.app-logo {
+  display: block;
+  width: min(100%, 520px);
+  height: auto;
+  border-radius: 12px;
+  margin-bottom: 14px;
 }
 
 .nav {
