@@ -41,6 +41,35 @@ Portable Windows web stack (install folder can live anywhere) with a control pan
 | Scripts | `<install>\scripts\` | Optional helpers (tray, mail, php-only, …) |
 | Control panel | [http://localhost/panel/](http://localhost/panel/) | Localhost only |
 
+
+>Windows Apache with Multi PHP (WAMP Web Stack) is a portable local web development environment for Windows. It packages Apache 2.4, multiple PHP versions, a local mail catcher (Mailpit), an FTP server, phpMyAdmin, and a web control panel so you can build and test dynamic sites offline before publishing.
+
+Key features:
+- Apache 2.4 (Apache Lounge Win32) with FastCGI PHP workers
+- Multi-PHP: add any php* folder with php-cgi.exe; ports are assigned automatically
+- Per-site PHP version selection from the control panel
+- Mailpit for local SMTP testing (SMTP 1025, UI 8025)
+- Plain FTP server on port 2121 with accounts managed in the panel
+- Web control panel at http://localhost/panel/ for Overview, Sites, PHP Config, logs, database tools, and FTP
+- System tray helper and simple start.bat / stop.bat scripts
+- Portable install folder — place the stack anywhere on disk
+
+Quick start:
+1. Download ApachePHPWindows.exe (or the ZIP package) from GitHub Releases or SourceForge
+2. Install or extract to a folder such as C:\web
+3. Run start.bat (allow Windows Firewall if prompted)
+4. Open http://localhost/panel/ to manage the stack
+5. Put site files under htdocs
+
+Requirements: Windows 8 or later, Visual C++ Redistributable (x86). Optional: MySQL or MariaDB on 127.0.0.1:3306 for database tools and phpMyAdmin.
+
+Project links:
+- SourceForge: https://sourceforge.net/projects/windows-apache-with-multi-php/
+- GitHub: https://github.com/amolpatil2025/WAMPP_Windows
+- Download: https://github.com/amolpatil2025/WAMPP_Windows/releases/download/1.5/ApachePHPWindows.exe
+
+Ideal for students, freelancers, and developers who need a lightweight, multi-PHP Windows alternative to heavier WAMP/XAMPP setups, with mail and FTP included for realistic local testing.</Char_Desc_2000>
+		
 ### Screenshots
 
 | Panel | Sites | PHP Config |
