@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "PatilWeb CPanel Apache Multi PHP for Windows"
-#define MyAppVersion "1.5"
+#define MyAppVersion "2.0"
 #define MyAppPublisher "PatilWeb"
 #define MyAppURL "https://www.patilweb.com/"
 #define MyAppExeName "start.bat"
@@ -82,9 +82,9 @@ Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; Value
 
 [Icons]
 ; Start Menu — full stack (start.bat) and tray-only
-Name: "{autoprograms}\{#MyAppName}\Run Full Service"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Start Apache, PHP, Mailpit, FTP, and open the panel"
-Name: "{autoprograms}\{#MyAppName}\Run Tray Only"; Filename: "{app}\scripts\start-tray.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Open the system tray icon only"
-Name: "{autoprograms}\{#MyAppName}\Stop Services"; Filename: "{app}\stop.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Stop all services"
+Name: "{autoprograms}\{#MyAppName}\PW Run Full Service"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Start Apache, PHP, Mailpit, FTP, and open the panel"
+Name: "{autoprograms}\{#MyAppName}\PW Run Tray Only"; Filename: "{app}\scripts\start-tray.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Open the system tray icon only"
+Name: "{autoprograms}\{#MyAppName}\PW Stop Services"; Filename: "{app}\stop.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Stop all services"
 ; Desktop (optional)
 Name: "{autodesktop}\{#MyAppName} - Full Service"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
 Name: "{autodesktop}\{#MyAppName} - Tray Only"; Filename: "{app}\scripts\start-tray.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
