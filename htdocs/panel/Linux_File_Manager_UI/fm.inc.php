@@ -3023,7 +3023,7 @@ global $lang, $root_url;
     <title>PatilWeb Files</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="neu.css?v=2">
+    <link rel="stylesheet" href="neu.css?v=3">
     <style>
         body.fm-login-page{background-color:#e4e9f0;font-size:14px}
         .fm-login-page .brand{width:121px;overflow:hidden;margin:0 auto;margin:40px auto;margin-bottom:0;position:relative;z-index:1}
