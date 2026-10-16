@@ -10,10 +10,10 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="icon" href="assets/patilweb-logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=19">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/app.css?v=21">
 </head>
-<body>
+<body class="theme-neu">
   <div class="app">
     <aside class="sidebar">
       <div class="brand" title="PatilWeb Control Panel for Windows Apache Server">
@@ -588,6 +588,6 @@ require __DIR__ . '/includes/bootstrap.php';
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="assets/app.js?v=20"></script>
+  <script src="assets/app.js?v=21"></script>
 </body>
 </html>
