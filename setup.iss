@@ -9,6 +9,7 @@
 #define MyAppAssocName MyAppName + " File"
 #define MyAppAssocExt ".exe"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
+#define MyAppIcon "htdocs\panel\assets\logo.ico"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -29,7 +30,7 @@ LicenseFile=C:\Users\amolp\Documents\WAMPP_Windows\README.md
 ;PrivilegesRequired=lowest
 OutputDir=C:\Users\amolp\Downloads
 OutputBaseFilename=ApachePHPWindows
-SetupIconFile=C:\Users\amolp\Documents\WAMPP_Windows\htdocs\panel\assets\patilweb-app-logo.jpg
+SetupIconFile=C:\Users\amolp\Documents\WAMPP_Windows\{#MyAppIcon}
 SolidCompression=yes
 WizardStyle=modern dynamic
 
@@ -38,6 +39,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "startupicon"; Description: "Start on Windows boot (run start.bat)"; GroupDescription: "Startup options:"; Flags: unchecked
+Name: "vcredist"; Description: "Install Visual C++ Redistributable (x86) — required by Apache Lounge Win32 and PHP x86 builds"; GroupDescription: "Prerequisites:"; Flags: checkedonce; Check: not IsVCRedistInstalled
 
 [Files]
 Source: "C:\Users\amolp\Documents\WAMPP_Windows\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -49,13 +52,115 @@ Source: "C:\Users\amolp\Documents\WAMPP_Windows\*"; DestDir: "{app}"; Flags: ign
 [Registry]
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocExt}\OpenWithProgids"; ValueType: string; ValueName: "{#MyAppAssocKey}"; ValueData: ""; Flags: uninsdeletevalue
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}"; ValueType: string; ValueName: ""; ValueData: "{#MyAppAssocName}"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppIcon}"
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+; Start Menu — full stack (start.bat) and tray-only
+Name: "{autoprograms}\{#MyAppName}\Run Full Service"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Start Apache, PHP, Mailpit, FTP, and open the panel"
+Name: "{autoprograms}\{#MyAppName}\Run Tray Only"; Filename: "{app}\scripts\start-tray.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Open the system tray icon only"
+Name: "{autoprograms}\{#MyAppName}\Stop Services"; Filename: "{app}\stop.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Comment: "Stop all services"
+; Desktop (optional)
+Name: "{autodesktop}\{#MyAppName} - Full Service"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName} - Tray Only"; Filename: "{app}\scripts\start-tray.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
+; Startup on boot (optional)
+Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\start.bat"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: startupicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall skipifsilent
 
+[Code]
+var
+  DownloadPage: TDownloadWizardPage;
+
+function IsVCRedistInstalled: Boolean;
+var
+  Installed: Cardinal;
+begin
+  { VC++ 2015–2022 (v14) x86 — required by Apache Lounge Win32 and PHP x86 }
+  Result := False;
+  if IsWin64 then
+  begin
+    if RegQueryDWordValue(HKLM32, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86', 'Installed', Installed) then
+      Result := (Installed = 1);
+  end
+  else
+  begin
+    if RegQueryDWordValue(HKLM, 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86', 'Installed', Installed) then
+      Result := (Installed = 1);
+  end;
+
+  { Fallback: runtime DLL present }
+  if not Result then
+  begin
+    if IsWin64 then
+      Result := FileExists(ExpandConstant('{syswow64}\vcruntime140.dll'))
+    else
+      Result := FileExists(ExpandConstant('{sys}\vcruntime140.dll'));
+  end;
+end;
+
+function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
+begin
+  if Progress = ProgressMax then
+    Log(Format('Successfully downloaded file to {tmp}: %s', [FileName]));
+  Result := True;
+end;
+
+procedure InitializeWizard;
+begin
+  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID = wpReady then
+  begin
+    if WizardIsTaskSelected('vcredist') then
+    begin
+      DownloadPage.Clear;
+      DownloadPage.Add('https://aka.ms/vc14/vc_redist.x86.exe', 'vc_redist.x86.exe', '');
+      DownloadPage.Show;
+      try
+        try
+          DownloadPage.Download;
+          Result := True;
+        except
+          if DownloadPage.AbortedByUser then
+            Log('VC++ redistributable download aborted by user.')
+          else
+            SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbCriticalError, MB_OK, IDOK);
+          Result := False;
+        end;
+      finally
+        DownloadPage.Hide;
+      end;
+    end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+  RedistPath: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if WizardIsTaskSelected('vcredist') then
+    begin
+      RedistPath := ExpandConstant('{tmp}\vc_redist.x86.exe');
+      if FileExists(RedistPath) then
+      begin
+        Log('Installing Visual C++ Redistributable (x86)...');
+        if not Exec(RedistPath, '/install /passive /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) then
+          SuppressibleMsgBox('Could not start Visual C++ Redistributable installer.'#13#10 + SysErrorMessage(ResultCode), mbError, MB_OK, IDOK)
+        else if (ResultCode <> 0) and (ResultCode <> 1638) and (ResultCode <> 3010) then
+          { 1638 = already installed; 3010 = success, reboot required }
+          SuppressibleMsgBox(Format('Visual C++ Redistributable installer finished with code %d.'#13#10 + 'Apache/PHP may fail to start until it is installed.'#13#10 + 'Download: https://aka.ms/vc14/vc_redist.x86.exe', [ResultCode]), mbInformation, MB_OK, IDOK);
+      end
+      else
+        SuppressibleMsgBox('Visual C++ Redistributable download was not found.'#13#10 + 'Please install manually:'#13#10 + 'https://aka.ms/vc14/vc_redist.x86.exe', mbError, MB_OK, IDOK);
+    end;
+  end;
+end;
