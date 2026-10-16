@@ -352,6 +352,7 @@ function renderStatus() {
     { href: mail.ui_url || 'http://127.0.0.1:8025/', label: 'Mail inbox', tip: 'Mailpit' },
     { href: 'http://localhost/mail-test/', label: 'Mail test', tip: 'Send a sample' },
     { href: 'http://localhost/phpmyadmin/', label: 'phpMyAdmin', tip: s.mysql?.up ? 'Database UI' : 'MySQL offline' },
+    { href: 'Linux_File_Manager_UI/', label: 'File manager', tip: 'Browse install files' },
   ];
   const toolsEl = $('#ov-tools');
   if (toolsEl) {
@@ -594,14 +595,16 @@ function showView(name) {
   state.view = name;
   $$('.nav button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
   $$('.section').forEach(s => s.classList.toggle('active', s.id === 'view-' + name));
+  $('.main')?.classList.toggle('files-mode', name === 'files');
   const titles = {
-        overview: ['Overview', 'See what’s running and start what you need'],
+    overview: ['Overview', 'See what’s running and start what you need'],
     sites: ['Sites', 'Add domains, local folders, and PHP versions'],
     php: ['PHP Config', 'Friendly php.ini controls — errors, limits, toggles'],
     config: ['Configuration editor', 'Edit Apache and PHP ini files'],
     logs: ['Logs', 'Parsed Apache / PHP logs by version, type, and message'],
     database: ['Database', 'Connection settings, browse schemas, and run SQL'],
     ftp: ['FTP', 'Plain FTP into folders inside this stack'],
+    files: ['Files', 'Browse and edit files under this install'],
   };
   const t = titles[name] || titles.overview;
   $('#page-title').textContent = t[0];

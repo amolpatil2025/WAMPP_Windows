@@ -11,7 +11,7 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=18">
+  <link rel="stylesheet" href="assets/app.css?v=19">
 </head>
 <body>
   <div class="app">
@@ -31,9 +31,11 @@ require __DIR__ . '/includes/bootstrap.php';
         <button type="button" data-view="logs">Logs</button>
         <button type="button" data-view="database">Database</button>
         <button type="button" data-view="ftp">FTP</button>
+        <button type="button" data-view="files">Files</button>
         <div class="nav-label">Tools</div>
         <button type="button" onclick="window.open('http://127.0.0.1:8025/', '_blank')">Mail inbox</button>
         <button type="button" onclick="window.open('http://localhost/phpmyadmin/', '_blank')">phpMyAdmin</button>
+        <button type="button" onclick="window.open('Linux_File_Manager_UI/', '_blank')">File manager</button>
       </nav>
     </aside>
 
@@ -516,6 +518,18 @@ require __DIR__ . '/includes/bootstrap.php';
         </div>
       </section>
 
+      <section class="section" id="view-files">
+        <div class="files-frame-wrap">
+          <iframe
+            id="files-frame"
+            class="files-frame"
+            title="File manager"
+            src="Linux_File_Manager_UI/"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </section>
+
       <section class="section" id="view-database">
         <div class="card db-conn-card" id="db-conn-card">
           <div class="row-between">
@@ -574,6 +588,6 @@ require __DIR__ . '/includes/bootstrap.php';
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="assets/app.js?v=19"></script>
+  <script src="assets/app.js?v=20"></script>
 </body>
 </html>
