@@ -178,7 +178,7 @@ a:hover { text-decoration: underline; }
   min-height: calc(100vh - 140px);
   border-radius: var(--radius);
   overflow: hidden;
-  background: var(--bg);
+  background: #e4e9f0;
   box-shadow: var(--neu-out);
 }
 .files-frame {

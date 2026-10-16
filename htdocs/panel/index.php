@@ -11,7 +11,7 @@ require __DIR__ . '/includes/bootstrap.php';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=21">
+  <link rel="stylesheet" href="assets/app.css?v=22">
 </head>
 <body class="theme-neu">
   <div class="app">
