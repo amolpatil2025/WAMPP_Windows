@@ -329,6 +329,65 @@ if (isset($_POST['ajax']) && !FM_READONLY) {
         }
     }
 
+    // PHP syntax check (php -l) for advanced editor
+    if (isset($_POST['type']) && $_POST['type'] == 'phplint') {
+        header('Content-Type: application/json; charset=utf-8');
+        $code = isset($_POST['code']) ? (string)$_POST['code'] : '';
+        if (strlen($code) > 5 * 1024 * 1024) {
+            echo json_encode(array('ok' => false, 'message' => 'File too large to lint'));
+            exit;
+        }
+        $php = fm_find_php_cli();
+        if ($php === '') {
+            echo json_encode(array('ok' => false, 'message' => 'PHP CLI not found'));
+            exit;
+        }
+        $tmp = tempnam(sys_get_temp_dir(), 'pwfm-lint-');
+        if ($tmp === false) {
+            echo json_encode(array('ok' => false, 'message' => 'Could not create temp file'));
+            exit;
+        }
+        $lintFile = $tmp . '.php';
+        @unlink($tmp);
+        if (file_put_contents($lintFile, $code) === false) {
+            echo json_encode(array('ok' => false, 'message' => 'Could not write temp file'));
+            exit;
+        }
+        $cmd = escapeshellarg($php) . ' -l ' . escapeshellarg($lintFile) . ' 2>&1';
+        $out = array();
+        $codeExit = 1;
+        @exec($cmd, $out, $codeExit);
+        @unlink($lintFile);
+        $text = trim(implode("\n", $out));
+        // Strip temp path from messages for cleaner UI
+        $text = str_replace($lintFile, 'file.php', $text);
+        $errors = array();
+        if ($codeExit !== 0 || stripos($text, 'No syntax errors detected') === false) {
+            $line = 1;
+            if (preg_match('/on line\s+(\d+)/i', $text, $m)) {
+                $line = (int)$m[1];
+            }
+            $msg = $text !== '' ? $text : 'Syntax error';
+            if (preg_match('/^(Parse error|Fatal error|Errors parsing)[:\s]*(.+)$/im', $text, $m2)) {
+                $msg = trim($m2[0]);
+                $msg = str_replace($lintFile, 'file.php', $msg);
+            }
+            $errors[] = array(
+                'row' => max(0, $line - 1),
+                'column' => 0,
+                'text' => $msg,
+                'type' => 'error',
+            );
+        }
+        echo json_encode(array(
+            'ok' => empty($errors),
+            'message' => empty($errors) ? 'No syntax errors detected' : $errors[0]['text'],
+            'errors' => $errors,
+            'php' => basename(str_replace('\\', '/', $php)),
+        ));
+        exit;
+    }
+
     exit();
 }
 
@@ -1367,21 +1426,22 @@ if (isset($_GET['edit'])) {
         $content = file_get_contents($file_path);
     }
 
+    $aceMode = fm_ace_mode_for_ext($ext);
+    $isPhpFile = in_array($ext, array('php', 'phtml'), true);
     ?>
-    <div class="path">
-        <div class="row">
+    <div class="path fm-editor-page" data-file-ext="<?php echo fm_enc($ext); ?>" data-ace-mode="<?php echo fm_enc($aceMode); ?>" data-php-lint="<?php echo $isPhpFile ? '1' : '0'; ?>">
+        <div class="row fm-editor-toolbar align-items-center">
             <div class="col-xs-12 col-sm-5 col-lg-6 pt-1">
                 <div class="btn-toolbar" role="toolbar">
                     <?php if (!$isNormalEditor) { ?>
-                        <div class="btn-group js-ace-toolbar">
-                            <button data-cmd="none" data-option="fullscreen" class="btn btn-sm btn-outline-secondary" id="js-ace-fullscreen" title="Fullscreen"><i class="fa fa-expand" title="Fullscreen"></i></button>
-                            <button data-cmd="find" class="btn btn-sm btn-outline-secondary" id="js-ace-search" title="Search"><i class="fa fa-search" title="Search"></i></button>
-                            <button data-cmd="undo" class="btn btn-sm btn-outline-secondary" id="js-ace-undo" title="Undo"><i class="fa fa-undo" title="Undo"></i></button>
-                            <button data-cmd="redo" class="btn btn-sm btn-outline-secondary" id="js-ace-redo" title="Redo"><i class="fa fa-repeat" title="Redo"></i></button>
-                            <button data-cmd="none" data-option="wrap" class="btn btn-sm btn-outline-secondary" id="js-ace-wordWrap" title="Word Wrap"><i class="fa fa-text-width" title="Word Wrap"></i></button>
-                            <button data-cmd="none" data-option="help" class="btn btn-sm btn-outline-secondary" id="js-ace-goLine" title="Help"><i class="fa fa-question" title="Help"></i></button>
-                            <select id="js-ace-mode" data-type="mode" title="Select Document Type" class="btn-outline-secondary border-left-0 d-none d-md-block"><option>-- Select Mode --</option></select>
-                            <select id="js-ace-theme" data-type="theme" title="Select Theme" class="btn-outline-secondary border-left-0 d-none d-lg-block"><option>-- Select Theme --</option></select>
+                        <div class="btn-group js-ace-toolbar flex-wrap">
+                            <button data-cmd="none" data-option="fullscreen" class="btn btn-sm btn-outline-secondary" id="js-ace-fullscreen" title="Fullscreen"><i class="fa fa-expand"></i></button>
+                            <button data-cmd="find" class="btn btn-sm btn-outline-secondary" id="js-ace-search" title="Search"><i class="fa fa-search"></i></button>
+                            <button data-cmd="undo" class="btn btn-sm btn-outline-secondary" id="js-ace-undo" title="Undo"><i class="fa fa-undo"></i></button>
+                            <button data-cmd="redo" class="btn btn-sm btn-outline-secondary" id="js-ace-redo" title="Redo"><i class="fa fa-repeat"></i></button>
+                            <button data-cmd="none" data-option="wrap" class="btn btn-sm btn-outline-secondary" id="js-ace-wordWrap" title="Word Wrap"><i class="fa fa-text-width"></i></button>
+                            <select id="js-ace-mode" data-type="mode" title="Select Document Type" class="btn btn-sm btn-outline-secondary"></select>
+                            <select id="js-ace-theme" data-type="theme" title="Select Theme" class="btn btn-sm btn-outline-secondary d-none d-lg-inline-block"></select>
                         </div>
                     <?php } ?>
                 </div>
@@ -1392,21 +1452,31 @@ if (isset($_GET['edit'])) {
                 <?php if ($is_text) { ?>
                     <?php if ($isNormalEditor) { ?>
                         <a title="Advanced" class="btn btn-sm btn-outline-primary" href="?p=<?php echo urlencode(trim(FM_PATH)) ?>&amp;edit=<?php echo urlencode($file) ?>&amp;env=ace"><i class="fa fa-pencil-square-o"></i> <?php echo lng('AdvancedEditor') ?></a>
-                        <button type="button" class="btn btn-sm btn-outline-primary name="Save" data-url="<?php echo fm_enc($file_url) ?>" onclick="edit_save(this,'nrl')"><i class="fa fa-floppy-o"></i> Save
-                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" name="Save" data-url="<?php echo fm_enc($file_url) ?>" onclick="edit_save(this,'nrl')"><i class="fa fa-floppy-o"></i> Save</button>
                     <?php } else { ?>
+                        <?php if ($isPhpFile) { ?>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="js-php-lint" title="Check PHP syntax"><i class="fa fa-check-circle"></i> Check PHP</button>
+                        <?php } ?>
                         <a title="Plain Editor" class="btn btn-sm btn-outline-primary" href="?p=<?php echo urlencode(trim(FM_PATH)) ?>&amp;edit=<?php echo urlencode($file) ?>"><i class="fa fa-text-height"></i> <?php echo lng('NormalEditor') ?></a>
-                        <button type="button" class="btn btn-sm btn-outline-primary" name="Save" data-url="<?php echo fm_enc($file_url) ?>" onclick="edit_save(this,'ace')"><i class="fa fa-floppy-o"></i> <?php echo lng('Save') ?>
-                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" name="Save" data-url="<?php echo fm_enc($file_url) ?>" onclick="edit_save(this,'ace')"><i class="fa fa-floppy-o"></i> <?php echo lng('Save') ?></button>
                     <?php } ?>
                 <?php } ?>
             </div>
         </div>
+        <?php if (!$isNormalEditor && $is_text) { ?>
+            <div id="js-lint-status" class="fm-lint-status muted" aria-live="polite">
+                <?php if ($isPhpFile) { ?>
+                    <i class="fa fa-code"></i> PHP syntax check ready — edits are checked automatically
+                <?php } else { ?>
+                    <i class="fa fa-file-code-o"></i> Editing <strong><?php echo fm_enc($file); ?></strong> · mode <?php echo fm_enc(str_replace('ace/mode/', '', $aceMode)); ?>
+                <?php } ?>
+            </div>
+        <?php } ?>
         <?php
         if ($is_text && $isNormalEditor) {
             echo '<textarea class="mt-2" id="normal-editor" rows="33" cols="120" style="width: 99.5%;">' . htmlspecialchars($content) . '</textarea>';
         } elseif ($is_text) {
-            echo '<div id="editor" contenteditable="true">' . htmlspecialchars($content) . '</div>';
+            echo '<div id="editor">' . htmlspecialchars($content) . '</div>';
         } else {
             fm_set_msg('FILE EXTENSION HAS NOT SUPPORTED', 'error');
         }
@@ -2667,6 +2737,98 @@ class FM_Zipper_Tar
 //--- templates functions
 
 /**
+ * Locate a PHP CLI binary for syntax linting
+ * @return string absolute path or empty
+ */
+function fm_find_php_cli()
+{
+    if (defined('PHP_BINARY') && PHP_BINARY && @is_file(PHP_BINARY)) {
+        return PHP_BINARY;
+    }
+    $runtime = dirname(__DIR__) . '/data/php-runtime.json';
+    if (is_file($runtime)) {
+        $json = json_decode((string)@file_get_contents($runtime), true);
+        if (is_array($json)) {
+            $def = isset($json['default']) ? (string)$json['default'] : '';
+            if ($def !== '' && isset($json['versions'][$def]['dir'])) {
+                $cand = rtrim(str_replace('\\', '/', $json['versions'][$def]['dir']), '/') . '/php.exe';
+                if (is_file($cand)) {
+                    return $cand;
+                }
+            }
+            if (!empty($json['versions']) && is_array($json['versions'])) {
+                foreach ($json['versions'] as $v) {
+                    if (!empty($v['dir'])) {
+                        $cand = rtrim(str_replace('\\', '/', $v['dir']), '/') . '/php.exe';
+                        if (is_file($cand)) {
+                            return $cand;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    $root = defined('FM_ROOT_PATH') ? FM_ROOT_PATH : '';
+    if ($root !== '') {
+        foreach (glob($root . '/php*/php.exe') ?: array() as $exe) {
+            if (is_file($exe)) {
+                return str_replace('\\', '/', $exe);
+            }
+        }
+    }
+    return '';
+}
+
+/**
+ * Map file extension to Ace editor mode
+ * @param string $ext
+ * @return string
+ */
+function fm_ace_mode_for_ext($ext)
+{
+    $ext = strtolower((string)$ext);
+    $map = array(
+        'php' => 'ace/mode/php',
+        'phtml' => 'ace/mode/php',
+        'js' => 'ace/mode/javascript',
+        'json' => 'ace/mode/json',
+        'css' => 'ace/mode/css',
+        'scss' => 'ace/mode/scss',
+        'less' => 'ace/mode/less',
+        'html' => 'ace/mode/html',
+        'htm' => 'ace/mode/html',
+        'xml' => 'ace/mode/xml',
+        'svg' => 'ace/mode/svg',
+        'md' => 'ace/mode/markdown',
+        'markdown' => 'ace/mode/markdown',
+        'sql' => 'ace/mode/sql',
+        'py' => 'ace/mode/python',
+        'rb' => 'ace/mode/ruby',
+        'java' => 'ace/mode/java',
+        'c' => 'ace/mode/c_cpp',
+        'cpp' => 'ace/mode/c_cpp',
+        'h' => 'ace/mode/c_cpp',
+        'cs' => 'ace/mode/csharp',
+        'go' => 'ace/mode/golang',
+        'rs' => 'ace/mode/rust',
+        'sh' => 'ace/mode/sh',
+        'bash' => 'ace/mode/sh',
+        'bat' => 'ace/mode/batchfile',
+        'cmd' => 'ace/mode/batchfile',
+        'ps1' => 'ace/mode/powershell',
+        'yml' => 'ace/mode/yaml',
+        'yaml' => 'ace/mode/yaml',
+        'ini' => 'ace/mode/ini',
+        'conf' => 'ace/mode/ini',
+        'htaccess' => 'ace/mode/apache_conf',
+        'txt' => 'ace/mode/text',
+        'log' => 'ace/mode/text',
+        'vbs' => 'ace/mode/vbscript',
+    );
+    return isset($map[$ext]) ? $map[$ext] : 'ace/mode/text';
+}
+
+/**
  * Classify a path for filters / badges
  * @param string $fullPath
  * @return string
@@ -2933,7 +3095,7 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
     <title>PatilWeb Files</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="neu.css?v=2">
+    <link rel="stylesheet" href="neu.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.css" />
     <?php if (FM_USE_HIGHLIGHTJS): ?>
@@ -2947,6 +3109,11 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
         }
         body.navbar-fixed {
             margin-top: 72px;
+        }
+        #editor {
+            position: relative;
+            width: 100%;
+            min-height: 360px;
         }
         a:hover, a:visited, a:focus {
             text-decoration: none !important;
@@ -3105,16 +3272,10 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
             margin-right: 4px
         }
         #editor {
-            position: absolute;
-            right: 15px;
-            top: 100px;
-            bottom: 15px;
-            left: 15px
-        }
-        @media (max-width:481px) {
-            #editor {
-                top: 150px;
-            }
+            position: relative;
+            width: 100%;
+            min-height: 360px;
+            height: calc(100vh - 220px);
         }
         #normal-editor {
             border-radius: 3px;
@@ -3392,51 +3553,209 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
 </script>
 <script src="neu.js?v=2"></script>
 <?php if (isset($_GET['edit']) && isset($_GET['env']) && FM_EDIT_FILE): ?>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.1/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-modelist.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-language_tools.js"></script>
     <script>
-        var editor = ace.edit("editor");
-        editor.getSession().setMode("ace/mode/javascript");
-        //editor.setTheme("ace/theme/twilight"); //Dark Theme
-        function ace_commend (cmd) { editor.commands.exec(cmd, editor); }
+    (function () {
+        var page = document.querySelector('.fm-editor-page');
+        var initialMode = (page && page.getAttribute('data-ace-mode')) || 'ace/mode/text';
+        var phpLintEnabled = page && page.getAttribute('data-php-lint') === '1';
+        var lintTimer = null;
+        var lintStatus = document.getElementById('js-lint-status');
+
+        ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/');
+        ace.require('ace/ext/language_tools');
+
+        var editor = ace.edit('editor');
+        window.editor = editor;
+        editor.setTheme('ace/theme/chrome');
+        editor.session.setMode(initialMode);
+        editor.setShowPrintMargin(false);
+        editor.setFontSize(14);
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+            enableSnippets: true,
+            scrollPastEnd: 0.2,
+            wrap: false
+        });
+        editor.renderer.setScrollMargin(8, 8, 0, 0);
+
+        function ace_commend(cmd) { editor.commands.exec(cmd, editor); }
+
         editor.commands.addCommands([{
-            name: 'save', bindKey: {win: 'Ctrl-S',  mac: 'Command-S'},
-            exec: function(editor) { edit_save(this, 'ace'); }
+            name: 'save',
+            bindKey: { win: 'Ctrl-S', mac: 'Command-S' },
+            exec: function () { edit_save(null, 'ace'); }
+        }, {
+            name: 'phpLint',
+            bindKey: { win: 'Ctrl-Shift-L', mac: 'Command-Shift-L' },
+            exec: function () { if (phpLintEnabled) runPhpLint(true); }
         }]);
-        function renderThemeMode() {
-            var $modeEl = $("select#js-ace-mode"), $themeEl = $("select#js-ace-theme"), optionNode = function(type, arr){ var $Option = ""; $.each(arr, function(i, val) { $Option += "<option value='"+type+i+"'>" + val + "</option>"; }); return $Option; };
-            if(window.config && window.config.aceMode) { $modeEl.html(optionNode("ace/mode/", window.config.aceMode)); }
-            if(window.config && window.config.aceTheme) { var lightTheme = optionNode("ace/theme/", window.config.aceTheme.bright), darkTheme = optionNode("ace/theme/", window.config.aceTheme.dark); $themeEl.html("<optgroup label=\"Bright\">"+lightTheme+"</optgroup><optgroup label=\"Dark\">"+darkTheme+"</optgroup>");}
+
+        var ACE_MODES = [
+            ['text', 'Plain Text'], ['php', 'PHP'], ['javascript', 'JavaScript'], ['json', 'JSON'],
+            ['html', 'HTML'], ['css', 'CSS'], ['scss', 'SCSS'], ['xml', 'XML'], ['markdown', 'Markdown'],
+            ['sql', 'SQL'], ['python', 'Python'], ['sh', 'Shell'], ['batchfile', 'Batch'],
+            ['powershell', 'PowerShell'], ['yaml', 'YAML'], ['ini', 'INI'], ['apache_conf', 'Apache'],
+            ['c_cpp', 'C/C++'], ['java', 'Java'], ['golang', 'Go'], ['ruby', 'Ruby'], ['vbscript', 'VBScript']
+        ];
+        var ACE_THEMES = {
+            bright: ['chrome', 'clouds', 'crimson_editor', 'dawn', 'github', 'iplastic', 'solarized_light', 'textmate', 'tomorrow', 'xcode'],
+            dark: ['ambiance', 'chaos', 'clouds_midnight', 'cobalt', 'dracula', 'idle_fingers', 'merbivore', 'monokai', 'nord_dark', 'pastel_on_dark', 'solarized_dark', 'terminal', 'tomorrow_night', 'twilight']
+        };
+
+        function fillSelects() {
+            var $modeEl = $('#js-ace-mode');
+            var $themeEl = $('#js-ace-theme');
+            var modeHtml = '';
+            ACE_MODES.forEach(function (m) {
+                var val = 'ace/mode/' + m[0];
+                modeHtml += '<option value="' + val + '"' + (val === initialMode ? ' selected' : '') + '>' + m[1] + '</option>';
+            });
+            $modeEl.html(modeHtml);
+            var themeHtml = '<optgroup label="Bright">';
+            ACE_THEMES.bright.forEach(function (t) {
+                themeHtml += '<option value="ace/theme/' + t + '"' + (t === 'chrome' ? ' selected' : '') + '>' + t + '</option>';
+            });
+            themeHtml += '</optgroup><optgroup label="Dark">';
+            ACE_THEMES.dark.forEach(function (t) {
+                themeHtml += '<option value="ace/theme/' + t + '">' + t + '</option>';
+            });
+            themeHtml += '</optgroup>';
+            $themeEl.html(themeHtml);
+
+            // Optional remote config enrichment
+            if (window.config && window.config.aceMode) {
+                // keep local list; remote is optional
+            }
         }
 
-        $(function(){
-            renderThemeMode();
-            $(".js-ace-toolbar").on("click", 'button', function(e){
+        function setLintStatus(ok, message) {
+            if (!lintStatus) return;
+            lintStatus.classList.remove('is-ok', 'is-bad', 'is-busy');
+            if (ok === null) {
+                lintStatus.classList.add('is-busy');
+                lintStatus.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Checking PHP syntax…';
+                return;
+            }
+            if (ok) {
+                lintStatus.classList.add('is-ok');
+                lintStatus.innerHTML = '<i class="fa fa-check-circle"></i> ' + (message || 'No syntax errors detected');
+            } else {
+                lintStatus.classList.add('is-bad');
+                lintStatus.innerHTML = '<i class="fa fa-times-circle"></i> ' + (message || 'Syntax error');
+            }
+        }
+
+        function runPhpLint(force) {
+            if (!phpLintEnabled || typeof jQuery === 'undefined') return;
+            setLintStatus(null);
+            jQuery.ajax({
+                type: 'POST',
+                url: '',
+                dataType: 'json',
+                data: {
+                    ajax: true,
+                    type: 'phplint',
+                    code: editor.getSession().getValue()
+                }
+            }).done(function (data) {
+                if (!data) {
+                    setLintStatus(false, 'Lint failed');
+                    editor.session.setAnnotations([]);
+                    return;
+                }
+                var anns = (data.errors || []).map(function (e) {
+                    return {
+                        row: e.row || 0,
+                        column: e.column || 0,
+                        text: e.text || 'Syntax error',
+                        type: e.type || 'error'
+                    };
+                });
+                editor.session.setAnnotations(anns);
+                if (anns.length && force) {
+                    editor.gotoLine((anns[0].row || 0) + 1, 0, true);
+                }
+                setLintStatus(!!data.ok, data.message || (data.ok ? 'No syntax errors detected' : 'Syntax error'));
+            }).fail(function () {
+                setLintStatus(false, 'Could not reach PHP lint service');
+                editor.session.setAnnotations([]);
+            });
+        }
+
+        function schedulePhpLint() {
+            if (!phpLintEnabled) return;
+            clearTimeout(lintTimer);
+            lintTimer = setTimeout(function () { runPhpLint(false); }, 700);
+        }
+
+        // Clear bogus worker markers for non-JS modes on load
+        editor.session.clearAnnotations();
+
+        $(function () {
+            fillSelects();
+
+            $('.js-ace-toolbar').on('click', 'button', function (e) {
                 e.preventDefault();
-                let cmdValue = $(this).attr("data-cmd"), editorOption = $(this).attr("data-option");
-                if(cmdValue && cmdValue != "none") {
+                var cmdValue = $(this).attr('data-cmd');
+                var editorOption = $(this).attr('data-option');
+                if (cmdValue && cmdValue !== 'none') {
                     ace_commend(cmdValue);
-                } else if(editorOption) {
-                    if(editorOption == "fullscreen") {
-                        (void 0!==document.fullScreenElement&&null===document.fullScreenElement||void 0!==document.msFullscreenElement&&null===document.msFullscreenElement||void 0!==document.mozFullScreen&&!document.mozFullScreen||void 0!==document.webkitIsFullScreen&&!document.webkitIsFullScreen)
-                        &&(editor.container.requestFullScreen?editor.container.requestFullScreen():editor.container.mozRequestFullScreen?editor.container.mozRequestFullScreen():editor.container.webkitRequestFullScreen?editor.container.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT):editor.container.msRequestFullscreen&&editor.container.msRequestFullscreen());
-                    } else if(editorOption == "wrap") {
-                        let wrapStatus = (editor.getSession().getUseWrapMode()) ? false : true;
-                        editor.getSession().setUseWrapMode(wrapStatus);
-                    } else if(editorOption == "help") {
-                        var helpHtml="";$.each(window.config.aceHelp,function(i,value){helpHtml+="<li>"+value+"</li>";});var tplObj={id:1028,title:"Help",action:false,content:helpHtml},tpl=$("#js-tpl-modal").html();$('#wrapper').append(template(tpl,tplObj));$("#js-ModalCenter-1028").modal('show');
-                    }
+                } else if (editorOption === 'fullscreen') {
+                    var el = editor.container;
+                    if (el.requestFullscreen) el.requestFullscreen();
+                    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                    else if (el.msRequestFullscreen) el.msRequestFullscreen();
+                } else if (editorOption === 'wrap') {
+                    editor.session.setUseWrapMode(!editor.session.getUseWrapMode());
                 }
             });
-            $("select#js-ace-mode, select#js-ace-theme").on("change", function(e){
-                e.preventDefault();
-                let selectedValue = $(this).val(), selectionType = $(this).attr("data-type");
-                if(selectedValue && selectionType == "mode") {
-                    editor.getSession().setMode(selectedValue);
-                } else if(selectedValue && selectionType == "theme") {
+
+            $('#js-ace-mode, #js-ace-theme').on('change', function () {
+                var selectedValue = $(this).val();
+                var selectionType = $(this).attr('data-type');
+                if (selectedValue && selectionType === 'mode') {
+                    editor.session.setMode(selectedValue);
+                    editor.session.clearAnnotations();
+                    phpLintEnabled = selectedValue.indexOf('/php') !== -1;
+                    if (phpLintEnabled) {
+                        schedulePhpLint();
+                    } else if (lintStatus) {
+                        lintStatus.classList.remove('is-ok', 'is-bad', 'is-busy');
+                        lintStatus.innerHTML = '<i class="fa fa-file-code-o"></i> Mode: ' + selectedValue.replace('ace/mode/', '');
+                    }
+                } else if (selectedValue && selectionType === 'theme') {
                     editor.setTheme(selectedValue);
                 }
             });
+
+            $('#js-php-lint').on('click', function (e) {
+                e.preventDefault();
+                runPhpLint(true);
+            });
+
+            if (phpLintEnabled) {
+                editor.session.on('change', schedulePhpLint);
+                runPhpLint(false);
+            }
+
+            // Keep editor sized under sticky nav / toolbar
+            function fitEditor() {
+                var top = document.querySelector('.fm-editor-toolbar');
+                var status = document.getElementById('js-lint-status');
+                var offset = 140;
+                if (top) offset = top.getBoundingClientRect().bottom + (status ? status.offsetHeight + 12 : 12) + 16;
+                var h = Math.max(280, window.innerHeight - offset);
+                document.getElementById('editor').style.height = h + 'px';
+                editor.resize();
+            }
+            fitEditor();
+            $(window).on('resize', fitEditor);
         });
+    })();
     </script>
 <?php endif; ?>
 </body>

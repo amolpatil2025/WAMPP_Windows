@@ -433,9 +433,61 @@ body.theme-neu .hljs {
   font-family: var(--mono);
 }
 body.theme-neu #editor {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 100%;
+  min-height: 360px;
+  margin-top: 10px;
   border-radius: var(--radius) !important;
   overflow: hidden;
   box-shadow: var(--neu-out);
+  background: #fff;
+}
+body.theme-neu .fm-editor-page {
+  padding-bottom: 20px;
+}
+body.theme-neu .fm-editor-toolbar {
+  margin-bottom: 4px;
+}
+body.theme-neu .fm-lint-status {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  box-shadow: var(--neu-in-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+body.theme-neu .fm-lint-status.is-ok {
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  box-shadow: var(--neu-out-xs);
+}
+body.theme-neu .fm-lint-status.is-bad {
+  color: var(--danger);
+  background: var(--danger-soft);
+  box-shadow: var(--neu-out-xs);
+}
+body.theme-neu .fm-lint-status.is-busy {
+  color: var(--info);
+  background: var(--info-soft);
+}
+body.theme-neu .js-ace-toolbar select.btn {
+  max-width: 150px;
+  height: 31px;
+  padding: 4px 8px;
+  font-weight: 700;
+}
+body.theme-neu .ace_gutter-cell.ace_error {
+  background-image: none !important;
+}
+body.theme-neu #normal-editor {
+  margin-top: 12px;
+  min-height: 60vh;
 }
 body.theme-neu .ekko-lightbox-item.fade.in.show .row {
   background: var(--bg) !important;
