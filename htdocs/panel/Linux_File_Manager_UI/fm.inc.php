@@ -1491,7 +1491,7 @@ if (isset($_GET['chmod']) && !FM_READONLY && !FM_IS_WIN) {
 
 //--- FILEMANAGER MAIN
 fm_show_header(); // HEADER
-fm_show_nav_path(FM_PATH); // current path
+fm_show_nav_path(FM_PATH); // current path (+ opens .fm-shell)
 
 // messages
 fm_show_message();
@@ -1500,11 +1500,11 @@ $num_files = count($files);
 $num_folders = count($folders);
 $all_files_size = 0;
 ?>
-<form action="" method="post" class="pt-3">
+<form action="" method="post">
     <input type="hidden" name="p" value="<?php echo fm_enc(FM_PATH) ?>">
     <input type="hidden" name="group" value="1">
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover table-sm bg-white" id="main-table">
+    <div class="table-responsive fm-table-wrap">
+        <table class="table table-hover table-sm" id="main-table">
             <thead class="thead-white">
             <tr>
                 <?php if (!FM_READONLY): ?>
@@ -1523,19 +1523,20 @@ $all_files_size = 0;
                 <th><?php echo lng('Actions') ?></th>
             </tr>
             </thead>
+            <tbody>
             <?php
             // link to parent folder
             if ($parent !== false) {
                 ?>
-                <tr><?php if (!FM_READONLY): ?>
+                <tr data-kind="folder"><?php if (!FM_READONLY): ?>
                     <td class="nosort"></td><?php endif; ?>
-                    <td class="border-0"><a href="?p=<?php echo urlencode($parent) ?>"><i class="fa fa-chevron-circle-left go-back"></i> ..</a></td>
-                    <td class="border-0"></td>
-                    <td class="border-0"></td>
-                    <td class="border-0"></td>
+                    <td><a href="?p=<?php echo urlencode($parent) ?>"><i class="fa fa-chevron-circle-left go-back"></i> ..</a></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                     <?php if (!FM_IS_WIN) { ?>
-                        <td class="border-0"></td>
-                        <td class="border-0"></td>
+                        <td></td>
+                        <td></td>
                     <?php } ?>
                 </tr>
                 <?php
@@ -1543,7 +1544,7 @@ $all_files_size = 0;
             $ii = 3399;
             foreach ($folders as $f) {
                 $is_link = is_link($path . '/' . $f);
-                $img = $is_link ? 'icon-link_folder' : 'fa fa-folder-o';
+                $img = $is_link ? 'fa fa-folder-o' : 'fa fa-folder-o';
                 $modif = date(FM_DATETIME_FORMAT, filemtime($path . '/' . $f));
                 $perms = substr(decoct(fileperms($path . '/' . $f)), -4);
                 if (function_exists('posix_getpwuid') && function_exists('posix_getgrgid')) {
@@ -1554,7 +1555,7 @@ $all_files_size = 0;
                     $group = array('name' => '?');
                 }
                 ?>
-                <tr>
+                <tr data-kind="folder">
                     <?php if (!FM_READONLY): ?>
                         <td class="custom-checkbox-td">
                         <div class="custom-control custom-checkbox">
@@ -1564,7 +1565,7 @@ $all_files_size = 0;
                         </td><?php endif; ?>
                     <td>
                         <div class="filename"><a href="?p=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="<?php echo $img ?>"></i> <?php echo fm_convert_win($f) ?>
-                            </a><?php echo($is_link ? ' &rarr; <i>' . readlink($path . '/' . $f) . '</i>' : '') ?></div>
+                            </a><span class="fm-kind folder">folder</span><?php echo($is_link ? ' &rarr; <i>' . readlink($path . '/' . $f) . '</i>' : '') ?></div>
                     </td>
                     <td><?php echo lng('Folder') ?></td>
                     <td><?php echo $modif ?></td>
@@ -1594,6 +1595,7 @@ $all_files_size = 0;
                 $filesize = fm_get_filesize($filesize_raw);
                 $filelink = '?p=' . urlencode(FM_PATH) . '&amp;view=' . urlencode($f);
                 $all_files_size += $filesize_raw;
+                $kind = fm_item_kind($path . '/' . $f);
                 $perms = substr(decoct(fileperms($path . '/' . $f)), -4);
                 if (function_exists('posix_getpwuid') && function_exists('posix_getgrgid')) {
                     $owner = posix_getpwuid(fileowner($path . '/' . $f));
@@ -1603,7 +1605,7 @@ $all_files_size = 0;
                     $group = array('name' => '?');
                 }
                 ?>
-                <tr>
+                <tr data-kind="<?php echo fm_enc($kind); ?>">
                     <?php if (!FM_READONLY): ?>
                         <td class="custom-checkbox-td">
                         <div class="custom-control custom-checkbox">
@@ -1613,7 +1615,7 @@ $all_files_size = 0;
                         </td><?php endif; ?>
                     <td>
                         <div class="filename"><a href="<?php echo $filelink ?>" title="File info"><i class="<?php echo $img ?>"></i> <?php echo fm_convert_win($f) ?>
-                            </a><?php echo($is_link ? ' &rarr; <i>' . readlink($path . '/' . $f) . '</i>' : '') ?></div>
+                            </a><?php if ($kind !== 'file'): ?><span class="fm-kind <?php echo fm_enc($kind); ?>"><?php echo fm_enc($kind); ?></span><?php endif; ?><?php echo($is_link ? ' &rarr; <i>' . readlink($path . '/' . $f) . '</i>' : '') ?></div>
                     </td>
                     <td><span title="<?php printf('%s bytes', $filesize_raw) ?>"><?php echo $filesize ?></span></td>
                     <td><?php echo $modif ?></td>
@@ -1638,13 +1640,21 @@ $all_files_size = 0;
                 flush();
                 $ik++;
             }
-
+            ?>
+            </tbody>
+            <?php
             if (empty($folders) && empty($files)) {
                 ?>
                 <tfoot>
                     <tr><?php if (!FM_READONLY): ?>
                             <td></td><?php endif; ?>
-                        <td colspan="<?php echo !FM_IS_WIN ? '6' : '4' ?>"><em><?php echo 'Folder is empty' ?></em></td>
+                        <td colspan="<?php echo !FM_IS_WIN ? '6' : '4' ?>">
+                            <div class="fm-empty">
+                                <i class="fa fa-folder-open-o"></i>
+                                <strong>This folder is empty</strong>
+                                <span>Upload files or create a new folder to get started.</span>
+                            </div>
+                        </td>
                     </tr>
                 </tfoot>
                 <?php
@@ -1654,11 +1664,12 @@ $all_files_size = 0;
                     <tr><?php if (!FM_READONLY): ?>
                             <td class="gray"></td><?php endif; ?>
                         <td class="gray" colspan="<?php echo !FM_IS_WIN ? '6' : '4' ?>">
-                            Full size: <span title="<?php printf('%s bytes', $all_files_size) ?>"><?php echo '<span class="badge badge-light">'.fm_get_filesize($all_files_size).'</span>' ?></span>,
-                            <?php echo lng('File').': <span class="badge badge-light">'.$num_files.'</span>' ?>,
-                            <?php echo lng('Folder').': <span class="badge badge-light">'.$num_folders.'</span>' ?>,
-                            <?php echo lng('MemoryUsed').': <span class="badge badge-light">'.fm_get_filesize(@memory_get_usage(true)).'</span>' ?>,
-                            <?php echo lng('PartitionSize').': <span class="badge badge-light">'.fm_get_filesize(@disk_free_space($path)) .'</span> free of <span class="badge badge-light">'.fm_get_filesize(@disk_total_space($path)).'</span>'; ?>
+                            <div class="fm-stats">
+                                <span class="badge badge-light" title="<?php printf('%s bytes', $all_files_size) ?>">Size <?php echo fm_get_filesize($all_files_size); ?></span>
+                                <span class="badge badge-light"><?php echo lng('File'); ?> <?php echo (int)$num_files; ?></span>
+                                <span class="badge badge-light"><?php echo lng('Folder'); ?> <?php echo (int)$num_folders; ?></span>
+                                <span class="badge badge-light"><?php echo lng('PartitionSize'); ?> <?php echo fm_get_filesize(@disk_free_space($path)); ?> free</span>
+                            </div>
                         </td>
                     </tr>
                 </tfoot>
@@ -1668,28 +1679,25 @@ $all_files_size = 0;
         </table>
     </div>
 
-    <div class="row">
-        <?php if (!FM_READONLY): ?>
-        <div class="col-xs-12 col-sm-9">
-            <ul class="list-inline footer-action">
-                <li class="list-inline-item"> <a href="#/select-all" class="btn btn-small btn-outline-primary btn-2" onclick="select_all();return false;"><i class="fa fa-check-square"></i> <?php echo lng('SelectAll') ?> </a></li>
-                <li class="list-inline-item"><a href="#/unselect-all" class="btn btn-small btn-outline-primary btn-2" onclick="unselect_all();return false;"><i class="fa fa-window-close"></i> <?php echo lng('UnSelectAll') ?> </a></li>
-                <li class="list-inline-item"><a href="#/invert-all" class="btn btn-small btn-outline-primary btn-2" onclick="invert_all();return false;"><i class="fa fa-th-list"></i> <?php echo lng('InvertSelection') ?> </a></li>
-                <li class="list-inline-item"><input type="submit" class="hidden" name="delete" id="a-delete" value="Delete" onclick="return confirm('Delete selected files and folders?')">
-                    <a href="javascript:document.getElementById('a-delete').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-trash"></i> <?php echo lng('Delete') ?> </a></li>
-                <li class="list-inline-item"><input type="submit" class="hidden" name="zip" id="a-zip" value="zip" onclick="return confirm('Create archive?')">
-                    <a href="javascript:document.getElementById('a-zip').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-file-archive-o"></i> <?php echo lng('Zip') ?> </a></li>
-                <li class="list-inline-item"><input type="submit" class="hidden" name="tar" id="a-tar" value="tar" onclick="return confirm('Create archive?')">
-                    <a href="javascript:document.getElementById('a-tar').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-file-archive-o"></i> <?php echo lng('Tar') ?> </a></li>
-                <li class="list-inline-item"><input type="submit" class="hidden" name="copy" id="a-copy" value="Copy">
-                    <a href="javascript:document.getElementById('a-copy').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-files-o"></i> <?php echo lng('Copy') ?> </a></li>
-            </ul>
-        </div>
-        <div class="col-3 d-none d-sm-block"><a href="https://patilweb.com?app=filemanager&type=linuxserver" target="_blank" class="float-right text-muted">Server File Manager By Patil Web Technologies <?php echo VERSION; ?></a></div>
-        <?php else: ?>
-            <div class="col-12"><a href="https://patilweb.com?app=filemanager&type=linuxserver" target="_blank" class="float-right text-muted">Server File Manager By Patil Technologies <?php echo VERSION; ?></a></div>
-        <?php endif; ?>
+    <div id="fm-grid" class="fm-grid" aria-live="polite"></div>
+
+    <?php if (!FM_READONLY): ?>
+    <div class="fm-actions-bar">
+        <ul class="list-inline footer-action">
+            <li class="list-inline-item"><a href="#/select-all" class="btn btn-small btn-outline-primary btn-2" onclick="select_all();return false;"><i class="fa fa-check-square"></i> <?php echo lng('SelectAll') ?></a></li>
+            <li class="list-inline-item"><a href="#/unselect-all" class="btn btn-small btn-outline-primary btn-2" onclick="unselect_all();return false;"><i class="fa fa-window-close"></i> <?php echo lng('UnSelectAll') ?></a></li>
+            <li class="list-inline-item"><a href="#/invert-all" class="btn btn-small btn-outline-primary btn-2" onclick="invert_all();return false;"><i class="fa fa-th-list"></i> <?php echo lng('InvertSelection') ?></a></li>
+            <li class="list-inline-item"><input type="submit" class="hidden" name="delete" id="a-delete" value="Delete" onclick="return confirm('Delete selected files and folders?')">
+                <a href="javascript:document.getElementById('a-delete').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-trash"></i> <?php echo lng('Delete') ?></a></li>
+            <li class="list-inline-item"><input type="submit" class="hidden" name="zip" id="a-zip" value="zip" onclick="return confirm('Create archive?')">
+                <a href="javascript:document.getElementById('a-zip').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-file-archive-o"></i> <?php echo lng('Zip') ?></a></li>
+            <li class="list-inline-item"><input type="submit" class="hidden" name="tar" id="a-tar" value="tar" onclick="return confirm('Create archive?')">
+                <a href="javascript:document.getElementById('a-tar').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-file-archive-o"></i> <?php echo lng('Tar') ?></a></li>
+            <li class="list-inline-item"><input type="submit" class="hidden" name="copy" id="a-copy" value="Copy">
+                <a href="javascript:document.getElementById('a-copy').click();" class="btn btn-small btn-outline-primary btn-2"><i class="fa fa-files-o"></i> <?php echo lng('Copy') ?></a></li>
+        </ul>
     </div>
+    <?php endif; ?>
 
 </form>
 
@@ -2659,6 +2667,65 @@ class FM_Zipper_Tar
 //--- templates functions
 
 /**
+ * Classify a path for filters / badges
+ * @param string $fullPath
+ * @return string
+ */
+function fm_item_kind($fullPath)
+{
+    if (@is_dir($fullPath)) {
+        return 'folder';
+    }
+    $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+    if (in_array($ext, array('jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'), true)) {
+        return 'image';
+    }
+    if (in_array($ext, array('php', 'js', 'css', 'html', 'htm', 'json', 'xml', 'yml', 'yaml', 'md', 'txt', 'ini', 'conf', 'htaccess', 'sql', 'sh', 'bat', 'ps1'), true)) {
+        return 'code';
+    }
+    if (in_array($ext, array('zip', 'tar', 'gz', 'rar', '7z', 'tgz', 'bz2'), true)) {
+        return 'archive';
+    }
+    return 'file';
+}
+
+/**
+ * Quick-jump folders under the FM root
+ * @return array
+ */
+function fm_quick_paths()
+{
+    $candidates = array(
+        array('label' => 'Root', 'path' => '', 'icon' => 'fa-home'),
+        array('label' => 'htdocs', 'path' => 'htdocs', 'icon' => 'fa-globe'),
+        array('label' => 'panel', 'path' => 'htdocs/panel', 'icon' => 'fa-tachometer'),
+        array('label' => 'Apache', 'path' => 'Apache24', 'icon' => 'fa-server'),
+        array('label' => 'PHP', 'path' => 'php8.0.30', 'icon' => 'fa-code'),
+        array('label' => 'ftp', 'path' => 'ftp', 'icon' => 'fa-exchange'),
+        array('label' => 'mailpit', 'path' => 'mailpit', 'icon' => 'fa-envelope'),
+    );
+    $out = array();
+    foreach ($candidates as $c) {
+        $full = rtrim(FM_ROOT_PATH . ($c['path'] !== '' ? '/' . $c['path'] : ''), '/');
+        if ($c['path'] === '' || is_dir($full)) {
+            $out[] = $c;
+        }
+    }
+    // Any extra php* folders
+    foreach (glob(FM_ROOT_PATH . '/php*', GLOB_ONLYDIR) ?: array() as $dir) {
+        $name = basename(str_replace('\\', '/', $dir));
+        $exists = false;
+        foreach ($out as $c) {
+            if ($c['path'] === $name) { $exists = true; break; }
+        }
+        if (!$exists) {
+            $out[] = array('label' => $name, 'path' => $name, 'icon' => 'fa-code');
+        }
+    }
+    return $out;
+}
+
+/**
  * Show nav block
  * @param string $path
  */
@@ -2666,17 +2733,20 @@ function fm_show_nav_path($path)
 {
     global $lang, $sticky_navbar;
     $isStickyNavBar = $sticky_navbar ? 'fixed-top' : '';
+    $path = fm_clean_path($path);
+    $absPath = rtrim(FM_ROOT_PATH . ($path !== '' ? '/' . $path : ''), '/');
     ?>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white mb-4 main-nav <?php echo $isStickyNavBar ?>">
-        <a class="navbar-brand" href=""> <?php echo lng('AppTitle') ?> </a>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white mb-3 main-nav <?php echo $isStickyNavBar ?>">
+        <a class="navbar-brand" href="?p=">
+            <span class="fm-brand-mark"><i class="fa fa-folder-open"></i></span>
+            <?php echo lng('AppTitle') ?>
+        </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-
             <?php
-            $path = fm_clean_path($path);
-            $root_url = "<a href='?p='><i class='fa fa-home' aria-hidden='true' title='" . FM_ROOT_PATH . "'></i></a>";
+            $root_url = "<a href='?p=' title='" . fm_enc(FM_ROOT_PATH) . "'><i class='fa fa-home' aria-hidden='true'></i></a>";
             $sep = '<i class="bread-crumb"> / </i>';
             if ($path != '') {
                 $exploded = explode('/', $path);
@@ -2690,43 +2760,65 @@ function fm_show_nav_path($path)
                 }
                 $root_url .= $sep . implode($sep, $array);
             }
-            echo '<div class="col-xs-6 col-sm-5">' . $root_url . '</div>';
+            echo '<div class="col-xs-12 col-sm-5 mb-2 mb-sm-0"><div class="fm-breadcrumb">' . $root_url . '</div></div>';
             ?>
-
-            <div class="col-xs-6 col-sm-7 text-right">
-                <ul class="navbar-nav mr-auto float-right">
+            <div class="col-xs-12 col-sm-7">
+                <div class="fm-nav-actions">
+                    <div class="input-group input-group-sm fm-search">
+                        <input type="text" class="form-control" placeholder="<?php echo lng('Search') ?> files…" aria-label="<?php echo lng('Search') ?>" id="search-addon" autocomplete="off">
+                        <div class="input-group-append">
+                            <span class="input-group-text" id="search-addon2"><i class="fa fa-search"></i></span>
+                        </div>
+                    </div>
                     <?php if (!FM_READONLY): ?>
-                    <li class="nav-item mr-2">
-                        <div class="input-group input-group-sm mr-1" style="margin-top:4px;">
-                            <input type="text" class="form-control" placeholder="<?php echo lng('Search') ?>" aria-label="<?php echo lng('Search') ?>" aria-describedby="search-addon2" id="search-addon">
-                            <div class="input-group-append">
-                                <span class="input-group-text" id="search-addon2"><i class="fa fa-search"></i></span>
-                            </div>
-                        </div>
-                    </li>
-                    <li class="nav-item">
-                        <a title="<?php echo lng('Upload') ?>" class="nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;upload"><i class="fa fa-cloud-upload" aria-hidden="true"></i> <?php echo lng('Upload') ?></a>
-                    </li>
-                    <li class="nav-item">
-                        <a title="<?php echo lng('NewItem') ?>" class="nav-link" href="#createNewItem" data-toggle="modal" data-target="#createNewItem"><i class="fa fa-plus-square"></i> <?php echo lng('NewItem') ?></a>
-                    </li>
+                    <a title="<?php echo lng('Upload') ?>" class="nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;upload"><i class="fa fa-cloud-upload" aria-hidden="true"></i> <?php echo lng('Upload') ?></a>
+                    <a title="<?php echo lng('NewItem') ?>" class="nav-link" href="#createNewItem" data-toggle="modal" data-target="#createNewItem"><i class="fa fa-plus"></i> <?php echo lng('NewItem') ?></a>
                     <?php endif; ?>
+                    <?php if (!FM_READONLY): ?>
+                    <a title="<?php echo lng('Settings') ?>" class="nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;settings=1"><i class="fa fa-cog" aria-hidden="true"></i></a>
+                    <?php endif; ?>
+                    <a title="<?php echo lng('Help') ?>" class="nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;help=2"><i class="fa fa-question-circle" aria-hidden="true"></i></a>
                     <?php if (FM_USE_AUTH): ?>
-                    <li class="nav-item avatar dropdown">
-                        <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink-5" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="fa fa-user-circle"></i> <?php if(isset($_SESSION[FM_SESSION_ID]['logged'])) { echo $_SESSION[FM_SESSION_ID]['logged']; } ?></a>
-                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink-5">
-                            <?php if (!FM_READONLY): ?>
-                            <a title="<?php echo lng('Settings') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;settings=1"><i class="fa fa-cog" aria-hidden="true"></i> <?php echo lng('Settings') ?></a>
-                            <?php endif ?>
-                            <a title="<?php echo lng('Help') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;help=2"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> <?php echo lng('Help') ?></a>
-                            <a title="<?php echo lng('Logout') ?>" class="dropdown-item nav-link" href="?logout=1"><i class="fa fa-sign-out" aria-hidden="true"></i> <?php echo lng('Logout') ?></a>
-                        </div>
-                    </li>
+                    <a title="<?php echo lng('Logout') ?>" class="nav-link" href="?logout=1"><i class="fa fa-sign-out" aria-hidden="true"></i></a>
                     <?php endif; ?>
-                </ul>
+                </div>
             </div>
         </div>
     </nav>
+    <div class="fm-shell is-list">
+        <div class="fm-toolbar">
+            <div class="fm-quick-paths">
+                <?php foreach (fm_quick_paths() as $qp):
+                    $active = ($path === $qp['path']) || ($qp['path'] !== '' && strpos($path . '/', $qp['path'] . '/') === 0);
+                ?>
+                <a class="fm-chip<?php echo $active ? ' active' : ''; ?>" href="?p=<?php echo urlencode($qp['path']); ?>">
+                    <i class="fa <?php echo fm_enc($qp['icon']); ?>"></i> <?php echo fm_enc($qp['label']); ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <div class="fm-toolbar-right">
+                <div class="fm-seg" role="group" aria-label="Filter">
+                    <button type="button" data-fm-filter="all" class="active">All</button>
+                    <button type="button" data-fm-filter="folder">Folders</button>
+                    <button type="button" data-fm-filter="code">Code</button>
+                    <button type="button" data-fm-filter="image">Images</button>
+                    <button type="button" data-fm-filter="archive">Archives</button>
+                </div>
+                <div class="fm-seg" role="group" aria-label="View">
+                    <button type="button" data-fm-view="list" class="active" title="List view"><i class="fa fa-list"></i></button>
+                    <button type="button" data-fm-view="grid" title="Grid view"><i class="fa fa-th-large"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="fm-path-meta">
+            <span>Path</span>
+            <code title="<?php echo fm_enc($absPath); ?>"><?php echo fm_enc(fm_convert_win($absPath)); ?></code>
+            <button type="button" class="btn btn-2" data-fm-copy-path="<?php echo fm_enc($absPath); ?>"><i class="fa fa-clipboard"></i> Copy path</button>
+            <?php if (!FM_READONLY): ?>
+            <a class="btn btn-2" href="?p=<?php echo urlencode(FM_PATH); ?>&amp;upload"><i class="fa fa-cloud-upload"></i> Upload</a>
+            <a class="btn btn-2" href="#createNewItem" data-toggle="modal" data-target="#createNewItem"><i class="fa fa-plus"></i> New</a>
+            <?php endif; ?>
+        </div>
     <?php
 }
 
@@ -2761,15 +2853,15 @@ global $lang, $root_url;
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Amol Manager 2.3.5 Control Panel By DjAmol Group">
-    <meta name="author" content="Amol Patil">
+    <meta name="description" content="PatilWeb Files — local stack file manager">
+    <meta name="author" content="PatilWeb">
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex">
     <link rel="icon" href="<?php echo $root_url ?>?img=favicon" type="image/png">
-    <title>Amol Manager 2.3.5 Control Panel By DjAmol Group</title>
+    <title>PatilWeb Files</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="neu.css?v=1">
+    <link rel="stylesheet" href="neu.css?v=2">
     <style>
         body.fm-login-page{background-color:#e4e9f0;font-size:14px}
         .fm-login-page .brand{width:121px;overflow:hidden;margin:0 auto;margin:40px auto;margin-bottom:0;position:relative;z-index:1}
@@ -2833,15 +2925,15 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Amol Manager 2.3.5 Control Panel By DjAmol Group">
-    <meta name="author" content="Amol Patil">
+    <meta name="description" content="PatilWeb Files — local stack file manager">
+    <meta name="author" content="PatilWeb">
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex">
     <link rel="icon" href="<?php echo $root_url ?>?img=favicon" type="image/png">
-    <title>Amol Manager 2.3.5 Control Panel By DjAmol Group</title>
+    <title>PatilWeb Files</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="neu.css?v=1">
+    <link rel="stylesheet" href="neu.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ekko-lightbox/5.3.0/ekko-lightbox.css" />
     <?php if (FM_USE_HIGHLIGHTJS): ?>
@@ -2854,7 +2946,7 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
             background: #e4e9f0;
         }
         body.navbar-fixed {
-            margin-top: 55px;
+            margin-top: 72px;
         }
         a:hover, a:visited, a:focus {
             text-decoration: none !important;
@@ -3175,7 +3267,8 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
     function fm_show_footer()
     {
     ?>
-</div>
+</div><!-- /.fm-shell -->
+</div><!-- /#wrapper -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
@@ -3297,6 +3390,7 @@ $isStickyNavBar = $sticky_navbar ? 'navbar-fixed' : 'navbar-normal';
         });
     });
 </script>
+<script src="neu.js?v=2"></script>
 <?php if (isset($_GET['edit']) && isset($_GET['env']) && FM_EDIT_FILE): ?>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.1/ace.js"></script>
     <script>
@@ -3399,7 +3493,7 @@ function lng($txt) {
     global $lang;
 
     // English Language
-    $tr['en']['AppName']        = 'Amol FMANGR';      $tr['en']['AppTitle']           = 'Amol File Manager';
+    $tr['en']['AppName']        = 'PatilWeb Files';      $tr['en']['AppTitle']           = 'PatilWeb Files';
     $tr['en']['Login']          = 'Sign in';                $tr['en']['Username']           = 'Username';
     $tr['en']['Password']       = 'Password';               $tr['en']['Logout']             = 'Sign Out';
     $tr['en']['Move']           = 'Move';                   $tr['en']['Copy']               = 'Copy';
