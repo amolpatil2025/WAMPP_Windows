@@ -10,6 +10,14 @@
 #define MyAppAssocExt ".exe"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 #define MyAppIcon "htdocs\panel\assets\logo.ico"
+; Code signing (fixes Windows "Unknown publisher" / SmartScreen).
+; Set CODESIGN_PFX to your .pfx path, and optionally CODESIGN_PASSWORD, then compile
+; with compile-signed.bat — or define SIGN=1 and configure Sign Tool "patilweb" in the IDE.
+#define SignPfx GetEnv("CODESIGN_PFX")
+#define SignPassword GetEnv("CODESIGN_PASSWORD")
+#if SignPfx != ""
+  #define DoCodeSign
+#endif
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -22,6 +30,14 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
+AppCopyright=Copyright (C) {#MyAppPublisher}
+VersionInfoVersion={#MyAppVersion}.0
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoCopyright=Copyright (C) {#MyAppPublisher}
+VersionInfoDescription={#MyAppName}
+VersionInfoProductName={#MyAppName}
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoTextVersion={#MyAppVersion}
 DefaultDirName={autopf}\PatilWebCpanel
 ChangesAssociations=yes
 DisableProgramGroupPage=yes
@@ -33,6 +49,15 @@ OutputBaseFilename=ApachePHPWindows
 SetupIconFile=C:\Users\amolp\Documents\WAMPP_Windows\{#MyAppIcon}
 SolidCompression=yes
 WizardStyle=modern dynamic
+; Digitally sign Setup + Uninstaller so UAC shows "{#MyAppPublisher}" instead of "Unknown publisher".
+; Requires a purchased Authenticode code-signing certificate (self-signed will NOT fix this).
+#ifdef DoCodeSign
+SignTool=patilweb
+SignedUninstaller=yes
+SignToolRetryCount=2
+SignToolRetryDelay=2000
+SignToolMinimumTimeBetween=1000
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
